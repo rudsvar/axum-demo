@@ -1,9 +1,8 @@
-use std::net::SocketAddr;
-
 use crate::{
-    grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},
+    api::grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},
     shutdown,
 };
+use std::net::SocketAddr;
 
 pub mod greeter;
 

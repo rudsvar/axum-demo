@@ -31,7 +31,7 @@ pub async fn hello_handler(Query(name): Query<Name>) -> Json<HelloResponse> {
 #[cfg(test)]
 mod tests {
     use super::HelloResponse;
-    use crate::rest::hello::{hello_handler, Name};
+    use crate::api::rest::hello::{hello_handler, Name};
     use axum::extract::Query;
 
     #[sqlx::test]

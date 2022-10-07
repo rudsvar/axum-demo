@@ -1,6 +1,5 @@
-use crate::service;
-
 use self::hello::{greeter_server::Greeter, HelloReply, HelloRequest};
+use crate::service;
 use tonic::Status;
 
 pub mod hello {
@@ -31,7 +30,7 @@ impl Greeter for MyGreeter {
 
 #[cfg(test)]
 mod tests {
-    use crate::grpc::greeter::{
+    use crate::api::grpc::greeter::{
         hello::{greeter_server::Greeter, HelloRequest},
         MyGreeter,
     };

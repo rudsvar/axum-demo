@@ -2,9 +2,10 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tracing::instrument;
+
+use crate::repository::item_repository::{self, Item, NewItem};
 
 pub fn item_routes() -> Router {
     Router::new()
@@ -12,41 +13,14 @@ pub fn item_routes() -> Router {
         .route("/items", get(list_items))
 }
 
-/// A name query parameter.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NewItem {
-    name: String,
-    description: Option<String>,
-}
-
-/// This is a response to the hello endpoint.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Item {
-    id: i32,
-    name: String,
-    description: Option<String>,
-}
-
 /// Creates a new item.
 #[instrument]
 pub async fn create_item(
     Extension(db): Extension<PgPool>,
-    Json(item): Json<NewItem>,
+    Json(new_item): Json<NewItem>,
 ) -> Json<Item> {
     let mut tx = db.begin().await.unwrap();
-    let item = sqlx::query_as!(
-        Item,
-        r#"
-        INSERT INTO items (name, description)
-        VALUES ($1, $2)
-        RETURNING *
-        "#,
-        item.name,
-        item.description
-    )
-    .fetch_one(&mut tx)
-    .await
-    .unwrap();
+    let item = item_repository::create_item(&mut tx, new_item).await;
     tx.commit().await.unwrap();
     Json(item)
 }
@@ -55,15 +29,7 @@ pub async fn create_item(
 #[instrument]
 pub async fn list_items(Extension(db): Extension<PgPool>) -> Json<Vec<Item>> {
     let mut tx = db.begin().await.unwrap();
-    let items = sqlx::query_as!(
-        Item,
-        r#"
-        SELECT * FROM items
-        "#
-    )
-    .fetch_all(&mut tx)
-    .await
-    .unwrap();
+    let items = item_repository::list_items(&mut tx).await;
     tx.commit().await.unwrap();
     Json(items)
 }
@@ -71,7 +37,7 @@ pub async fn list_items(Extension(db): Extension<PgPool>) -> Json<Vec<Item>> {
 #[cfg(test)]
 mod tests {
     use super::{create_item, Item};
-    use crate::rest::items::{list_items, NewItem};
+    use crate::api::rest::items::{list_items, NewItem};
     use axum::{Extension, Json};
     use sqlx::PgPool;
 

@@ -1,6 +1,9 @@
 //! An example web service with axum.
 
-use axum_web_demo::{grpc, infra::config, rest};
+use axum_web_demo::{
+    api::{grpc, rest},
+    infra::config,
+};
 use sqlx::{
     pool::PoolOptions,
     postgres::{PgConnectOptions, PgSslMode},
