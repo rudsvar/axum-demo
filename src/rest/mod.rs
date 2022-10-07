@@ -20,38 +20,12 @@ use tracing::instrument;
 
 use crate::shutdown;
 
-/// A name query parameter.
-#[derive(Debug, Deserialize)]
-pub struct Name {
-    name: String,
-}
-
-/// This is a response to the hello endpoint.
-#[derive(Serialize)]
-pub struct HelloResponse {
-    /// A personal greeting.
-    greeting: String,
-    /// Request counter.
-    count: usize,
-}
-
-/// A handler for requests to the hello endpoint.
-#[instrument]
-pub async fn hello_handler(
-    Extension(i): Extension<Arc<AtomicUsize>>,
-    Query(name): Query<Name>,
-) -> Json<HelloResponse> {
-    let prev = i.fetch_add(1, Ordering::SeqCst);
-    Json(HelloResponse {
-        greeting: name.name,
-        count: prev,
-    })
-}
+pub mod hello;
 
 pub async fn axum_server() -> Result<(), hyper::Error> {
     let app = Router::new()
         .route("/", post(|| async move { "Hello from `POST /`" }))
-        .route("/hello", get(hello_handler))
+        .nest("/", hello::hello_routes())
         .layer(middleware::from_fn(print_request_response))
         .layer(Extension(Arc::new(AtomicUsize::new(0))))
         .into_make_service();
