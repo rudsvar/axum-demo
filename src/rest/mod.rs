@@ -1,22 +1,16 @@
 use std::{
     net::SocketAddr,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicUsize, Arc},
 };
 
 use axum::{
     body::Bytes,
-    extract::Query,
     middleware::{self, Next},
     response::IntoResponse,
-    routing::{get, post},
-    Extension, Json, Router,
+    routing::post,
+    Extension, Router,
 };
 use hyper::{Body, Request, Response, StatusCode};
-use serde::{Deserialize, Serialize};
-use tracing::instrument;
 
 use crate::shutdown;
 
