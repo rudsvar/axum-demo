@@ -1,7 +1,7 @@
+use crate::{grpc::hello_world::greeter_server::GreeterServer, shutdown};
 use tonic::Status;
-use crate::grpc::hello_world::greeter_server::GreeterServer;
 
-use self::hello_world::{greeter_server::Greeter, HelloRequest, HelloReply};
+use self::hello_world::{greeter_server::Greeter, HelloReply, HelloRequest};
 
 pub mod hello_world {
     tonic::include_proto!("helloworld"); // The string specified here must match the proto package name
@@ -34,11 +34,6 @@ pub async fn tonic_server() -> Result<(), tonic::transport::Error> {
     tracing::info!("Starting Tonic on {}", addr);
     let grpc_server = tonic::transport::Server::builder()
         .add_service(GreeterServer::new(MyGreeter::default()))
-        .serve_with_shutdown(addr, async {
-            if let Err(e) = tokio::signal::ctrl_c().await {
-                tracing::error!("Failed to fetch ctrl_c: {}", e);
-            }
-            tracing::info!("Tonic shutting down");
-        });
+        .serve_with_shutdown(addr, shutdown("tonic"));
     grpc_server.await
 }

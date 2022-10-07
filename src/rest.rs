@@ -18,6 +18,8 @@ use hyper::{Body, Request, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
+use crate::shutdown;
+
 /// A name query parameter.
 #[derive(Debug, Deserialize)]
 pub struct Name {
@@ -57,12 +59,7 @@ pub async fn axum_server() -> Result<(), hyper::Error> {
     tracing::info!("Starting Axum on {}", addr);
     let axum_server = axum::Server::bind(&addr)
         .serve(app)
-        .with_graceful_shutdown(async {
-            if let Err(e) = tokio::signal::ctrl_c().await {
-                tracing::error!("Failed to fetch ctrl_c: {}", e);
-            }
-            tracing::info!("Axum shutting down");
-        });
+        .with_graceful_shutdown(shutdown("axum"));
     axum_server.await
 }
 
