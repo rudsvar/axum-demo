@@ -9,7 +9,7 @@ async fn main() -> anyhow::Result<()> {
 
     let stdout = tracing_subscriber::fmt::layer().with_filter(EnvFilter::new(log_level));
 
-    let file_appender = tracing_appender::rolling::minutely("./logs", "prefix.log");
+    let file_appender = tracing_appender::rolling::hourly("./logs", "log.");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     let file_writer = tracing_subscriber::fmt::layer()
         .with_ansi(false)
