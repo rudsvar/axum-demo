@@ -1,18 +1,22 @@
-//! Run with
-//!
-//! ```not_rust
-//! cd examples && cargo run -p example-print-request-response
-//! ```
+//! An example web service with axum.
 
 use axum::{
     body::{Body, Bytes},
+    extract::Query,
     http::{Request, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::post,
-    Router,
+    routing::{get, post},
+    Extension, Json, Router,
 };
-use std::net::SocketAddr;
+use serde::{Deserialize, Serialize};
+use std::{
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+};
 use tonic::Status;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -45,12 +49,41 @@ impl Greeter for MyGreeter {
     }
 }
 
+/// A name query parameter.
+#[derive(Deserialize)]
+pub struct Name {
+    name: String,
+}
+
+/// This is a response to the hello endpoint.
+#[derive(Serialize)]
+pub struct HelloResponse {
+    /// A personal greeting.
+    greeting: String,
+    /// Request counter.
+    count: usize,
+}
+
+/// A handler for requests to the hello endpoint.
+pub async fn hello_handler(
+    Extension(i): Extension<Arc<AtomicUsize>>,
+    Query(name): Query<Name>,
+) -> Json<HelloResponse> {
+    let prev = i.fetch_add(1, Ordering::SeqCst);
+    Json(HelloResponse {
+        greeting: name.name,
+        count: prev,
+    })
+}
+
 async fn axum_server() -> Result<(), hyper::Error> {
     let app = Router::new()
         .route("/", post(|| async move { "Hello from `POST /`" }))
+        .route("/hello", get(hello_handler))
         .layer(middleware::from_fn(print_request_response))
+        .layer(Extension(Arc::new(AtomicUsize::new(0))))
         .into_make_service();
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     tracing::info!("Starting Axum on {}", addr);
     let axum_server = axum::Server::bind(&addr)
         .serve(app)
