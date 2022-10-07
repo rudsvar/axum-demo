@@ -4,13 +4,10 @@ use axum::{
     middleware::{self, Next},
     response::IntoResponse,
     routing::post,
-    Extension, Router,
+    Router,
 };
 use hyper::{Body, Request, Response, StatusCode};
-use std::{
-    net::TcpListener,
-    sync::{atomic::AtomicUsize, Arc},
-};
+use std::net::TcpListener;
 
 pub mod hello;
 
@@ -19,7 +16,6 @@ pub async fn axum_server(addr: TcpListener) -> Result<(), hyper::Error> {
         .route("/", post(|| async move { "Hello from `POST /`" }))
         .nest("/", hello::hello_routes())
         .layer(middleware::from_fn(print_request_response))
-        .layer(Extension(Arc::new(AtomicUsize::new(0))))
         .into_make_service();
     tracing::info!("Starting Axum on {:?}", addr.local_addr());
     let axum_server = axum::Server::from_tcp(addr)?

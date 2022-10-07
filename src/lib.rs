@@ -1,5 +1,6 @@
 pub mod grpc;
 pub mod rest;
+pub mod service;
 
 /// Completes when when ctrl-c is pressed.
 pub(crate) async fn shutdown(name: &str) {

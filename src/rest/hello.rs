@@ -1,9 +1,5 @@
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
-
-use axum::{extract::Query, routing::get, Extension, Json, Router};
+use crate::service;
+use axum::{extract::Query, routing::get, Json, Router};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -22,20 +18,13 @@ pub struct Name {
 pub struct HelloResponse {
     /// A personal greeting.
     greeting: String,
-    /// Request counter.
-    count: usize,
 }
 
 /// A handler for requests to the hello endpoint.
 #[instrument]
-pub async fn hello_handler(
-    Extension(i): Extension<Arc<AtomicUsize>>,
-    Query(name): Query<Name>,
-) -> Json<HelloResponse> {
-    let prev = i.fetch_add(1, Ordering::SeqCst);
+pub async fn hello_handler(Query(name): Query<Name>) -> Json<HelloResponse> {
     Json(HelloResponse {
-        greeting: format!("Hello {}!", name.name),
-        count: prev,
+        greeting: service::greeter::greet(&name.name),
     })
 }
 
@@ -61,8 +50,7 @@ mod tests {
 
         assert_eq!(
             HelloResponse {
-                greeting: "Hello World!".to_string(),
-                count: 0,
+                greeting: "Hello, World!".to_string(),
             },
             response
         );

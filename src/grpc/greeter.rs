@@ -1,3 +1,5 @@
+use crate::service;
+
 use self::hello::{greeter_server::Greeter, HelloReply, HelloRequest};
 use tonic::Status;
 
@@ -18,7 +20,7 @@ impl Greeter for MyGreeter {
 
         // Return an instance of type HelloReply
         tracing::debug!("gRPC in: {}", request.name);
-        let message = format!("Hello {}!", request.name);
+        let message = service::greeter::greet(&request.name);
         tracing::debug!("gRPC out: {}", message);
 
         let reply = hello::HelloReply { message };
@@ -41,6 +43,6 @@ mod tests {
             name: "World".to_string(),
         });
         let output = greeter.say_hello(input).await.unwrap();
-        assert_eq!("Hello World!", output.into_inner().message);
+        assert_eq!("Hello, World!", output.into_inner().message);
     }
 }
