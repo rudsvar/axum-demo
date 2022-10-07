@@ -39,6 +39,7 @@ sqlx = { version = "0.6.2", default_features = false, features = [
     "migrate",
     "offline",
 ] }
+config = "0.13.2"
 
 [build-dependencies]
 tonic-build = "0.8"

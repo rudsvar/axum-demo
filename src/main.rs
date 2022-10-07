@@ -1,6 +1,6 @@
 //! An example web service with axum.
 
-use axum_web_demo::{grpc, rest};
+use axum_web_demo::{grpc, infra::config, rest};
 use sqlx::{
     pool::PoolOptions,
     postgres::{PgConnectOptions, PgSslMode},
@@ -31,12 +31,13 @@ async fn main() -> anyhow::Result<()> {
     reg.init();
 
     // Configure database connection
+    let config = config::load_config()?;
     let mut db_options = PgConnectOptions::default()
-        .username("postgres")
-        .password("password")
-        .host("localhost")
-        .port(5432)
-        .database("axum-web-demo")
+        .username(&config.database.username)
+        .password(&config.database.password)
+        .host(&config.database.host)
+        .port(config.database.port)
+        .database(&config.database.database_name)
         .ssl_mode(PgSslMode::Prefer);
     db_options.log_statements(tracing::log::LevelFilter::Debug);
     let db: PgPool = PoolOptions::default()
@@ -44,9 +45,13 @@ async fn main() -> anyhow::Result<()> {
         .connect_lazy_with(db_options);
 
     // Start servers
-    let listener = TcpListener::bind("0.0.0.0:8080")?;
+    let listener = TcpListener::bind(&format!(
+        "{}:{}",
+        config.server.address, config.server.http_port
+    ))?;
     let axum_server = tokio::spawn(rest::axum_server(listener, db));
-    let tonic_server = tokio::spawn(grpc::tonic_server("[::1]:50051".parse()?));
+    let grpc_addr = format!("{}:{}", config.server.grpc_address, config.server.grpc_port);
+    let tonic_server = tokio::spawn(grpc::tonic_server(grpc_addr.parse()?));
     let _ = tokio::join!(axum_server, tonic_server);
 
     Ok(())
