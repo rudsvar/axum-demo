@@ -27,12 +27,20 @@ impl Greeter for MyGreeter {
     }
 }
 
-#[tokio::test]
-async fn greeter_test() {
-    let greeter = MyGreeter {};
-    let input = tonic::Request::new(HelloRequest {
-        name: "World".to_string(),
-    });
-    let output = greeter.say_hello(input).await.unwrap();
-    assert_eq!("Hello World!", output.into_inner().message);
+#[cfg(test)]
+mod tests {
+    use crate::grpc::greeter::{
+        hello::{greeter_server::Greeter, HelloRequest},
+        MyGreeter,
+    };
+
+    #[tokio::test]
+    async fn greeter_test() {
+        let greeter = MyGreeter {};
+        let input = tonic::Request::new(HelloRequest {
+            name: "World".to_string(),
+        });
+        let output = greeter.say_hello(input).await.unwrap();
+        assert_eq!("Hello World!", output.into_inner().message);
+    }
 }

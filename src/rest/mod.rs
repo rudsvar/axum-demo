@@ -1,8 +1,4 @@
-use std::{
-    net::SocketAddr,
-    sync::{atomic::AtomicUsize, Arc},
-};
-
+use crate::shutdown;
 use axum::{
     body::Bytes,
     middleware::{self, Next},
@@ -11,21 +7,22 @@ use axum::{
     Extension, Router,
 };
 use hyper::{Body, Request, Response, StatusCode};
-
-use crate::shutdown;
+use std::{
+    net::TcpListener,
+    sync::{atomic::AtomicUsize, Arc},
+};
 
 pub mod hello;
 
-pub async fn axum_server() -> Result<(), hyper::Error> {
+pub async fn axum_server(addr: TcpListener) -> Result<(), hyper::Error> {
     let app = Router::new()
         .route("/", post(|| async move { "Hello from `POST /`" }))
         .nest("/", hello::hello_routes())
         .layer(middleware::from_fn(print_request_response))
         .layer(Extension(Arc::new(AtomicUsize::new(0))))
         .into_make_service();
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    tracing::info!("Starting Axum on {}", addr);
-    let axum_server = axum::Server::bind(&addr)
+    tracing::info!("Starting Axum on {:?}", addr.local_addr());
+    let axum_server = axum::Server::from_tcp(addr)?
         .serve(app)
         .with_graceful_shutdown(shutdown("axum"));
     axum_server.await

@@ -1,6 +1,7 @@
 //! An example web service with axum.
 
 use axum_web_demo::{grpc, rest};
+use std::net::TcpListener;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 #[tokio::main]
@@ -23,8 +24,9 @@ async fn main() -> anyhow::Result<()> {
 
     reg.init();
 
-    let axum_server = tokio::spawn(rest::axum_server());
-    let tonic_server = tokio::spawn(grpc::tonic_server());
+    let listener = TcpListener::bind("0.0.0.0:8080")?;
+    let axum_server = tokio::spawn(rest::axum_server(listener));
+    let tonic_server = tokio::spawn(grpc::tonic_server("[::1]:50051".parse()?));
     let _ = tokio::join!(axum_server, tonic_server);
 
     Ok(())

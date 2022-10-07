@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use crate::{
     grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},
     shutdown,
@@ -5,8 +7,7 @@ use crate::{
 
 pub mod greeter;
 
-pub async fn tonic_server() -> Result<(), tonic::transport::Error> {
-    let addr = "[::1]:50051".parse().unwrap();
+pub async fn tonic_server(addr: SocketAddr) -> Result<(), tonic::transport::Error> {
     tracing::info!("Starting Tonic on {}", addr);
     let grpc_server = tonic::transport::Server::builder()
         .add_service(GreeterServer::new(MyGreeter::default()))
