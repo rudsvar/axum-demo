@@ -30,29 +30,22 @@ pub async fn hello_handler(Query(name): Query<Name>) -> Json<HelloResponse> {
 
 #[cfg(test)]
 mod tests {
-    use crate::rest::axum_server;
-
     use super::HelloResponse;
-    use std::net::TcpListener;
+    use crate::rest::hello::{hello_handler, Name};
+    use axum::extract::Query;
 
-    #[tokio::test]
+    #[sqlx::test]
     async fn hello_test() {
-        let addr = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = addr.local_addr().unwrap().port();
-        let _ = tokio::spawn(axum_server(addr));
-        let response: HelloResponse =
-            reqwest::get(format!("http://localhost:{}/hello?name=World", port))
-                .await
-                .unwrap()
-                .json()
-                .await
-                .unwrap();
+        let response = hello_handler(Query(Name {
+            name: "World".to_string(),
+        }))
+        .await;
 
         assert_eq!(
             HelloResponse {
                 greeting: "Hello, World!".to_string(),
             },
-            response
+            response.0
         );
     }
 }
