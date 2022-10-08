@@ -4,8 +4,10 @@ use axum::{
 };
 use sqlx::PgPool;
 use tracing::instrument;
-
-use crate::repository::item_repository::{self, Item, NewItem};
+use crate::{
+    repository::item_repository::{Item, NewItem},
+    service::item_service,
+};
 
 pub fn item_routes() -> Router {
     Router::new()
@@ -19,25 +21,21 @@ pub async fn create_item(
     Extension(db): Extension<PgPool>,
     Json(new_item): Json<NewItem>,
 ) -> Json<Item> {
-    let mut tx = db.begin().await.unwrap();
-    let item = item_repository::create_item(&mut tx, new_item).await;
-    tx.commit().await.unwrap();
+    let item = item_service::create_item(db, new_item).await;
     Json(item)
 }
 
 /// Lists all items.
 #[instrument]
 pub async fn list_items(Extension(db): Extension<PgPool>) -> Json<Vec<Item>> {
-    let mut tx = db.begin().await.unwrap();
-    let items = item_repository::list_items(&mut tx).await;
-    tx.commit().await.unwrap();
+    let items = item_service::list_items(db).await;
     Json(items)
 }
 
 #[cfg(test)]
 mod tests {
     use super::{create_item, Item};
-    use crate::api::rest::items::{list_items, NewItem};
+    use crate::api::rest::item_api::{list_items, NewItem};
     use axum::{Extension, Json};
     use sqlx::PgPool;
 

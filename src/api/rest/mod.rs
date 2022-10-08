@@ -11,13 +11,13 @@ use sqlx::PgPool;
 use std::net::TcpListener;
 
 pub mod hello;
-pub mod items;
+pub mod item_api;
 
 pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
     let app = Router::new()
         .route("/", post(|| async move { "Hello from `POST /`" }))
         .nest("/", hello::hello_routes())
-        .nest("/", items::item_routes())
+        .nest("/", item_api::item_routes())
         .layer(Extension(db))
         .layer(middleware::from_fn(print_request_response))
         .into_make_service();
