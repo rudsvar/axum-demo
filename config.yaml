@@ -9,4 +9,4 @@ database:
   port: 5432
   username: "postgres"
   password: "password"
-  database_name: "actix-web-demo"
+  database_name: "axum-web-demo"
