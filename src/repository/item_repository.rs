@@ -18,8 +18,9 @@ pub struct Item {
 }
 
 /// Creates a new item.
-#[instrument]
+#[instrument(skip(tx))]
 pub async fn create_item(tx: &mut Transaction<'static, Postgres>, new_item: NewItem) -> Item {
+    tracing::info!("Creating item {:?}", new_item);
     let item = sqlx::query_as!(
         Item,
         r#"
@@ -33,12 +34,14 @@ pub async fn create_item(tx: &mut Transaction<'static, Postgres>, new_item: NewI
     .fetch_one(tx)
     .await
     .unwrap();
+    tracing::info!("Created item {:?}", item);
     item
 }
 
 /// Lists all items.
-#[instrument]
+#[instrument(skip(tx))]
 pub async fn list_items(tx: &mut Transaction<'static, Postgres>) -> Vec<Item> {
+    tracing::info!("Listing items");
     let items = sqlx::query_as!(
         Item,
         r#"
@@ -48,6 +51,7 @@ pub async fn list_items(tx: &mut Transaction<'static, Postgres>) -> Vec<Item> {
     .fetch_all(tx)
     .await
     .unwrap();
+    tracing::info!("Got items {:?}", items);
     items
 }
 
