@@ -42,7 +42,7 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
         .into_make_service();
-    tracing::info!("Starting Axum on {:?}", addr.local_addr());
+    tracing::info!("Starting axum on {:?}", addr.local_addr());
     let axum_server = axum::Server::from_tcp(addr)?
         .serve(app)
         .with_graceful_shutdown(shutdown("axum"));

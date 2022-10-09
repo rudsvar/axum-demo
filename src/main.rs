@@ -2,7 +2,7 @@
 
 use axum_web_demo::{
     api::{grpc, rest},
-    infra::config,
+    infra::config::{self, DatabaseConfig},
 };
 use sqlx::{
     pool::PoolOptions,
@@ -10,11 +10,10 @@ use sqlx::{
     ConnectOptions, PgPool,
 };
 use std::{net::TcpListener, time::Duration};
+use tracing::log::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // Set up logging
+fn init_logging() {
     let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info,axum_web_demo=debug".into());
 
     let (non_blocking_stdout, _guard) = tracing_appender::non_blocking(std::io::stdout());
@@ -35,20 +34,28 @@ async fn main() -> anyhow::Result<()> {
         .with(file_appender);
 
     reg.init();
+}
 
-    // Configure database connection
-    let config = config::load_config()?;
+fn init_db(config: &DatabaseConfig) -> PgPool {
     let mut db_options = PgConnectOptions::default()
-        .username(&config.database.username)
-        .password(&config.database.password)
-        .host(&config.database.host)
-        .port(config.database.port)
-        .database(&config.database.database_name)
+        .username(&config.username)
+        .password(&config.password)
+        .host(&config.host)
+        .port(config.port)
+        .database(&config.database_name)
         .ssl_mode(PgSslMode::Prefer);
-    db_options.log_statements(tracing::log::LevelFilter::Debug);
+    db_options.log_statements(LevelFilter::Debug);
     let db: PgPool = PoolOptions::default()
         .acquire_timeout(Duration::from_secs(5))
         .connect_lazy_with(db_options);
+    db
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    init_logging();
+    let config = config::load_config()?;
+    let db = init_db(&config.database);
 
     // Start servers
     let listener = TcpListener::bind(&format!(
