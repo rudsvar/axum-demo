@@ -9,19 +9,22 @@ edition = "2021"
 
 # Web
 axum = "0.5.15"
+tower = "0.4.13"
+tower-http = { version = "0.3.4", features = [
+    "tracing",
+    "trace",
+    "request-id",
+    "propagate-header",
+    "sensitive-headers",
+    "set-header",
+    "compression-gzip",
+] }
 hyper = "0.14.20"
 tokio = { version = "1.20.1", features = [
     "macros",
     "rt-multi-thread",
     "signal",
 ] }
-
-# Serialization
-serde = { version = "1.0.144", features = ["derive"] }
-
-# Tracing
-tracing = "0.1.36"
-tracing-subscriber = { version = "0.3.15", features = ["env-filter", "json"] }
 
 # gRPC
 tonic = "0.8.1"
@@ -39,7 +42,17 @@ sqlx = { version = "0.6.2", default_features = false, features = [
     "migrate",
     "offline",
 ] }
+
+# Serialization
+serde = { version = "1.0.144", features = ["derive"] }
+
+# Tracing
+tracing = "0.1.36"
+tracing-subscriber = { version = "0.3.15", features = ["env-filter", "json"] }
+
+# Utilities
 config = "0.13.2"
+uuid = { version = "1.2.0", features = ["v4"] }
 
 [build-dependencies]
 tonic-build = "0.8"
