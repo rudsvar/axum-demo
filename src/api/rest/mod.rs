@@ -22,6 +22,7 @@ use tracing::Level;
 
 pub mod hello;
 pub mod item_api;
+pub mod user_api;
 
 static X_REQUEST_ID: &str = "x-request-id";
 
@@ -31,6 +32,7 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
         .route("/", post(|| async move { "Hello from `POST /`" }))
         .merge(hello::hello_routes())
         .merge(item_api::item_routes())
+        .merge(user_api::user_routes())
         .layer(Extension(db))
         .layer(middleware::from_fn(print_request_response))
         .layer(PropagateHeaderLayer::new(request_id.clone()))

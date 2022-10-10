@@ -11,18 +11,23 @@ use sqlx::{
 };
 use std::{net::TcpListener, time::Duration};
 use tracing::log::LevelFilter;
+use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
-fn init_logging() {
+struct LogGuard {
+    _guards: Vec<WorkerGuard>,
+}
+
+fn init_logging() -> LogGuard {
     let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info,axum_web_demo=debug".into());
 
-    let (non_blocking_stdout, _guard) = tracing_appender::non_blocking(std::io::stdout());
+    let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
     let stdout = tracing_subscriber::fmt::layer()
         .with_writer(non_blocking_stdout)
         .with_filter(EnvFilter::new(log_level));
 
     let file_appender = tracing_appender::rolling::hourly("./logs", "log.");
-    let (non_blocking_file_appender, _guard) = tracing_appender::non_blocking(file_appender);
+    let (non_blocking_file_appender, file_guard) = tracing_appender::non_blocking(file_appender);
     let file_appender = tracing_subscriber::fmt::layer()
         .with_ansi(false)
         .with_writer(non_blocking_file_appender)
@@ -34,6 +39,10 @@ fn init_logging() {
         .with(file_appender);
 
     reg.init();
+
+    LogGuard {
+        _guards: vec![stdout_guard, file_guard],
+    }
 }
 
 fn init_db(config: &DatabaseConfig) -> PgPool {
@@ -53,7 +62,7 @@ fn init_db(config: &DatabaseConfig) -> PgPool {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    init_logging();
+    let _guard = init_logging();
     let config = config::load_config()?;
     let db = init_db(&config.database);
 
