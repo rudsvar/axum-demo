@@ -6,7 +6,7 @@ use axum::{
 };
 use hyper::StatusCode;
 use sqlx::PgPool;
-use tracing::instrument;
+use tracing::{instrument, Instrument};
 
 pub fn user_routes() -> Router {
     Router::new().route("/login", post(login))
@@ -19,11 +19,15 @@ pub async fn login(
     TypedHeader(basic_auth): TypedHeader<Authorization<Basic>>,
 ) -> Result<Json<i32>, StatusCode> {
     tracing::info!("Fetching connection");
-    let mut tx = db.acquire().await.unwrap();
+    let mut conn = db
+        .acquire()
+        .instrument(tracing::info_span!("acquire"))
+        .await
+        .unwrap();
     let username = basic_auth.username();
     let password = basic_auth.password();
     tracing::info!("Authenticating user");
-    let id = user_repository::authenticate(&mut tx, username, password).await;
+    let id = user_repository::authenticate(&mut conn, username, password).await;
     tracing::info!("Returning");
     id.map(Json).ok_or(StatusCode::UNAUTHORIZED)
 }

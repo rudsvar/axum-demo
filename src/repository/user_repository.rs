@@ -7,8 +7,8 @@ struct User {
 }
 
 /// Validate a user's password.
-#[instrument(skip(tx, password))]
-pub async fn authenticate(tx: &mut PgConnection, username: &str, password: &str) -> Option<i32> {
+#[instrument(skip(conn, password))]
+pub async fn authenticate(conn: &mut PgConnection, username: &str, password: &str) -> Option<i32> {
     tracing::info!("Fetching {}'s password", username);
     let user = sqlx::query_as!(
         User,
@@ -18,7 +18,7 @@ pub async fn authenticate(tx: &mut PgConnection, username: &str, password: &str)
         "#,
         username
     )
-    .fetch_one(tx)
+    .fetch_one(conn)
     .await
     .unwrap();
 

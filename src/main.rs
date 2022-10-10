@@ -34,9 +34,17 @@ fn init_logging() -> LogGuard {
         .json()
         .with_filter(EnvFilter::new("info,axum_web_demo=trace"));
 
+    let app_name = env!("CARGO_PKG_NAME");
+    let opentelemetry_tracer = opentelemetry_jaeger::new_pipeline()
+        .with_service_name(app_name)
+        .install_simple()
+        .unwrap();
+    let opentelemetry = tracing_opentelemetry::layer().with_tracer(opentelemetry_tracer);
+
     let reg = tracing_subscriber::registry()
         .with(stdout)
-        .with(file_appender);
+        .with(file_appender)
+        .with(opentelemetry);
 
     reg.init();
 
