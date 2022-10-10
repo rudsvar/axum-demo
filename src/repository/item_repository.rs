@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{Postgres, Transaction};
-use tracing::instrument;
+use sqlx::{PgConnection, Postgres, Transaction};
+use tracing::{instrument, Instrument};
 
 /// A new item.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,7 +40,7 @@ pub async fn create_item(tx: &mut Transaction<'static, Postgres>, new_item: NewI
 
 /// Lists all items.
 #[instrument(skip(tx))]
-pub async fn list_items(tx: &mut Transaction<'static, Postgres>) -> Vec<Item> {
+pub async fn list_items(tx: &mut PgConnection) -> Vec<Item> {
     tracing::info!("Listing items");
     let items = sqlx::query_as!(
         Item,
@@ -49,6 +49,7 @@ pub async fn list_items(tx: &mut Transaction<'static, Postgres>) -> Vec<Item> {
         "#
     )
     .fetch_all(tx)
+    .instrument(tracing::info_span!("fetch_all"))
     .await
     .unwrap();
     tracing::info!("Got items {:?}", items);
