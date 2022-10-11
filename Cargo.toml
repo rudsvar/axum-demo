@@ -59,6 +59,7 @@ opentelemetry = { version = "0.18.0", default-features = false, features = [
 config = "0.13.2"
 uuid = { version = "1.2.0", features = ["v4"] }
 bcrypt = "0.13.0"
+thiserror = "1.0.37"
 
 [build-dependencies]
 tonic-build = "0.8"

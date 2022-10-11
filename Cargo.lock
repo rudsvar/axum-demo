@@ -164,6 +164,7 @@ dependencies = [
  "reqwest",
  "serde",
  "sqlx",
+ "thiserror",
  "tokio",
  "tonic",
  "tonic-build",
