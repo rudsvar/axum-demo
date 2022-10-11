@@ -1,4 +1,5 @@
 use crate::{
+    infra::error::ApiResult,
     repository::item_repository::{Item, NewItem},
     service::item_service,
 };
@@ -20,16 +21,16 @@ pub fn item_routes() -> Router {
 pub async fn create_item(
     Extension(db): Extension<PgPool>,
     Json(new_item): Json<NewItem>,
-) -> Json<Item> {
-    let item = item_service::create_item(db, new_item).await;
-    Json(item)
+) -> ApiResult<Json<Item>> {
+    let item = item_service::create_item(db, new_item).await?;
+    Ok(Json(item))
 }
 
 /// Lists all items.
 #[instrument(skip(db))]
-pub async fn list_items(Extension(db): Extension<PgPool>) -> Json<Vec<Item>> {
-    let items = item_service::list_items(db).await;
-    Json(items)
+pub async fn list_items(Extension(db): Extension<PgPool>) -> ApiResult<Json<Vec<Item>>> {
+    let items = item_service::list_items(db).await?;
+    Ok(Json(items))
 }
 
 #[cfg(test)]
@@ -48,7 +49,8 @@ mod tests {
                 description: None,
             }),
         )
-        .await;
+        .await
+        .unwrap();
 
         assert_eq!(
             Item {
@@ -59,7 +61,7 @@ mod tests {
             item.0,
         );
 
-        let items = list_items(Extension(db.clone())).await;
+        let items = list_items(Extension(db.clone())).await.unwrap();
         assert_eq!(&item.0, items.last().unwrap());
     }
 }

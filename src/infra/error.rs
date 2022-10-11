@@ -2,16 +2,43 @@ use axum::{response::IntoResponse, Json};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, thiserror::Error)]
-pub(crate) enum ApiError {
-    #[error("{0}")]
-    ClientError(#[from] ClientError),
-    #[error("internal error")]
-    InternalError(#[from] InternalError),
-}
+pub type ApiResult<T> = Result<T, ApiError>;
 
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum ClientError {
+pub enum ApiError {
+    #[error("{0}")]
+    ClientError(#[from] ClientError),
+    #[error("{0}")]
+    DatabaseError(#[from] sqlx::Error),
+}
+
+impl PartialEq for ApiError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::ClientError(l0), Self::ClientError(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            ApiError::ClientError(e) => e.into_response(),
+            e => {
+                tracing::error!("internal error: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse::new("internal error".to_string())),
+                )
+                    .into_response()
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
+pub enum ClientError {
     #[error("unauthorized")]
     Unauthorized,
     #[error("forbidden")]
@@ -35,24 +62,8 @@ impl IntoResponse for ClientError {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub(crate) enum InternalError {
-    #[error("database error: {0}")]
-    DatabaseError(sqlx::Error),
-}
-
-impl IntoResponse for InternalError {
-    fn into_response(self) -> axum::response::Response {
-        let message = self.to_string();
-        let status = match self {
-            InternalError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-        (status, Json(ErrorResponse::new(message))).into_response()
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct ErrorResponse {
+#[derive(PartialEq, Eq, Serialize, Deserialize)]
+pub struct ErrorResponse {
     message: String,
 }
 

@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::{PgConnection, Postgres, Transaction};
 use tracing::{instrument, Instrument};
 
+use crate::infra::error::ApiResult;
+
 /// A new item.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NewItem {
@@ -19,7 +21,10 @@ pub struct Item {
 
 /// Creates a new item.
 #[instrument(skip(tx))]
-pub async fn create_item(tx: &mut Transaction<'static, Postgres>, new_item: NewItem) -> Item {
+pub async fn create_item(
+    tx: &mut Transaction<'static, Postgres>,
+    new_item: NewItem,
+) -> ApiResult<Item> {
     tracing::info!("Creating item {:?}", new_item);
     let item = sqlx::query_as!(
         Item,
@@ -32,15 +37,14 @@ pub async fn create_item(tx: &mut Transaction<'static, Postgres>, new_item: NewI
         new_item.description
     )
     .fetch_one(tx)
-    .await
-    .unwrap();
+    .await?;
     tracing::info!("Created item {:?}", item);
-    item
+    Ok(item)
 }
 
 /// Lists all items.
 #[instrument(skip(tx))]
-pub async fn list_items(tx: &mut PgConnection) -> Vec<Item> {
+pub async fn list_items(tx: &mut PgConnection) -> ApiResult<Vec<Item>> {
     tracing::info!("Listing items");
     let items = sqlx::query_as!(
         Item,
@@ -50,10 +54,9 @@ pub async fn list_items(tx: &mut PgConnection) -> Vec<Item> {
     )
     .fetch_all(tx)
     .instrument(tracing::info_span!("fetch_all"))
-    .await
-    .unwrap();
+    .await?;
     tracing::info!("Got items {:?}", items);
-    items
+    Ok(items)
 }
 
 #[cfg(test)]
@@ -72,7 +75,7 @@ mod tests {
                 description: None,
             },
         )
-        .await;
+        .await.unwrap();
 
         assert_eq!(
             Item {
@@ -83,7 +86,7 @@ mod tests {
             item,
         );
 
-        let items = list_items(&mut tx).await;
+        let items = list_items(&mut tx).await.unwrap();
         assert_eq!(&item, items.last().unwrap());
     }
 }
