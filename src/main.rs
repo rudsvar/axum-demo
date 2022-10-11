@@ -64,6 +64,8 @@ fn init_db(config: &DatabaseConfig) -> PgPool {
     db_options.log_statements(LevelFilter::Debug);
     let db: PgPool = PoolOptions::default()
         .acquire_timeout(Duration::from_secs(5))
+        .min_connections(1)
+        .max_connections(100)
         .connect_lazy_with(db_options);
     db
 }
