@@ -10,7 +10,11 @@ struct User {
 
 /// Validate a user's password.
 #[instrument(skip(conn, password))]
-pub async fn authenticate(conn: &mut PgConnection, username: &str, password: &str) -> ApiResult<Option<i32>> {
+pub async fn authenticate(
+    conn: &mut PgConnection,
+    username: &str,
+    password: &str,
+) -> ApiResult<Option<i32>> {
     tracing::info!("Fetching {}'s password", username);
     let user = sqlx::query_as!(
         User,
@@ -21,8 +25,7 @@ pub async fn authenticate(conn: &mut PgConnection, username: &str, password: &st
         username
     )
     .fetch_one(conn)
-    .await
-    ?;
+    .await?;
 
     tracing::info!("Verifying password");
     let user_id = if let Ok(true) = bcrypt::verify(password, &user.password) {

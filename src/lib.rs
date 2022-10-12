@@ -1,7 +1,7 @@
 pub mod api;
 pub mod infra;
-pub mod service;
 pub mod repository;
+pub mod service;
 
 /// Completes when when ctrl-c is pressed.
 pub(crate) async fn shutdown(name: &str) {

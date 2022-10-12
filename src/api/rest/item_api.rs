@@ -3,22 +3,24 @@ use crate::{
     repository::item_repository::{Item, NewItem},
     service::item_service,
 };
-use axum::{
-    routing::{get, post},
-    Extension, Json, Router,
-};
+use axum::{Extension, Json, Router};
+use axum_extra::routing::{RouterExt, TypedPath};
+use serde::Deserialize;
 use sqlx::PgPool;
 use tracing::instrument;
 
 pub fn item_routes() -> Router {
-    Router::new()
-        .route("/items", post(create_item))
-        .route("/items", get(list_items))
+    Router::new().typed_post(create_item).typed_get(list_items)
 }
+
+#[derive(TypedPath, Deserialize)]
+#[typed_path("/items")]
+pub struct ItemsPath;
 
 /// Creates a new item.
 #[instrument(skip(db))]
-pub async fn create_item(
+async fn create_item(
+    _: ItemsPath,
     Extension(db): Extension<PgPool>,
     Json(new_item): Json<NewItem>,
 ) -> ApiResult<Json<Item>> {
@@ -28,7 +30,10 @@ pub async fn create_item(
 
 /// Lists all items.
 #[instrument(skip(db))]
-pub async fn list_items(Extension(db): Extension<PgPool>) -> ApiResult<Json<Vec<Item>>> {
+pub async fn list_items(
+    _: ItemsPath,
+    Extension(db): Extension<PgPool>,
+) -> ApiResult<Json<Vec<Item>>> {
     let items = item_service::list_items(db).await?;
     Ok(Json(items))
 }
@@ -36,13 +41,14 @@ pub async fn list_items(Extension(db): Extension<PgPool>) -> ApiResult<Json<Vec<
 #[cfg(test)]
 mod tests {
     use super::{create_item, Item};
-    use crate::api::rest::item_api::{list_items, NewItem};
+    use crate::api::rest::item_api::{list_items, ItemsPath, NewItem};
     use axum::{Extension, Json};
     use sqlx::PgPool;
 
     #[sqlx::test]
     async fn create_then_list_returns_item(db: PgPool) {
         let item = create_item(
+            ItemsPath,
             Extension(db.clone()),
             Json(NewItem {
                 name: "Foo".to_string(),
@@ -61,7 +67,7 @@ mod tests {
             item.0,
         );
 
-        let items = list_items(Extension(db.clone())).await.unwrap();
+        let items = list_items(ItemsPath, Extension(db.clone())).await.unwrap();
         assert_eq!(&item.0, items.last().unwrap());
     }
 }

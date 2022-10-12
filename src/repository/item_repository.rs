@@ -75,7 +75,8 @@ mod tests {
                 description: None,
             },
         )
-        .await.unwrap();
+        .await
+        .unwrap();
 
         assert_eq!(
             Item {

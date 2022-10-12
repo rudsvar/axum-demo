@@ -4,19 +4,25 @@ use crate::{
 };
 use axum::{
     headers::{authorization::Basic, Authorization},
-    routing::post,
     Extension, Json, Router, TypedHeader,
 };
+use axum_extra::routing::{RouterExt, TypedPath};
+use serde::Deserialize;
 use sqlx::PgPool;
 use tracing::{instrument, Instrument};
 
 pub fn user_routes() -> Router {
-    Router::new().route("/login", post(login))
+    Router::new().typed_post(login)
 }
+
+#[derive(TypedPath, Deserialize)]
+#[typed_path("/login")]
+pub struct LoginPath;
 
 /// Creates a new item.
 #[instrument(skip(db, basic_auth))]
 pub async fn login(
+    _: LoginPath,
     Extension(db): Extension<PgPool>,
     TypedHeader(basic_auth): TypedHeader<Authorization<Basic>>,
 ) -> ApiResult<Json<i32>> {
@@ -40,7 +46,7 @@ mod tests {
     use sqlx::PgPool;
 
     use crate::{
-        api::rest::user_api::login,
+        api::rest::user_api::{login, LoginPath},
         infra::error::{ApiError, ClientError},
     };
 
@@ -49,7 +55,7 @@ mod tests {
         let username = "user";
         let password = "user";
         let basic_auth = TypedHeader(Authorization::basic(username, password));
-        let Json(id) = login(Extension(db), basic_auth).await.unwrap();
+        let Json(id) = login(LoginPath, Extension(db), basic_auth).await.unwrap();
         assert_eq!(1, id);
     }
 
@@ -58,7 +64,9 @@ mod tests {
         let username = "user";
         let password = "notuser";
         let basic_auth = TypedHeader(Authorization::basic(username, password));
-        let error = login(Extension(db), basic_auth).await.unwrap_err();
+        let error = login(LoginPath, Extension(db), basic_auth)
+            .await
+            .unwrap_err();
         assert_eq!(ApiError::ClientError(ClientError::Unauthorized), error);
     }
 }
