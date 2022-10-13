@@ -1,6 +1,6 @@
 use crate::service;
 use axum::{extract::Query, Json, Router};
-use axum_extra::routing::{TypedPath, RouterExt};
+use axum_extra::routing::{RouterExt, TypedPath};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -36,14 +36,17 @@ pub async fn hello_handler(_: HelloPath, Query(name): Query<Name>) -> Json<Hello
 #[cfg(test)]
 mod tests {
     use super::HelloResponse;
-    use crate::api::rest::hello::{hello_handler, Name, HelloPath};
+    use crate::api::rest::hello::{hello_handler, HelloPath, Name};
     use axum::extract::Query;
 
     #[sqlx::test]
     async fn hello_test() {
-        let response = hello_handler(HelloPath, Query(Name {
-            name: "World".to_string(),
-        }))
+        let response = hello_handler(
+            HelloPath,
+            Query(Name {
+                name: "World".to_string(),
+            }),
+        )
         .await;
 
         assert_eq!(
