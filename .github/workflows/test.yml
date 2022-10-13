@@ -22,8 +22,8 @@ jobs:
         ports:
           - 5432:5432
     env:
-      SQLX_VERSION: 0.6.2
-      SQLX_FEATURES: postgres runtime-tokio-rustls
+      SQLX_VERSION: 0.5.5
+      SQLX_FEATURES: postgres
     steps:
       - uses: actions/checkout@v2
 
