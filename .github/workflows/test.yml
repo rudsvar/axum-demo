@@ -59,6 +59,7 @@ jobs:
             --version=${{ env.SQLX_VERSION }}
             --features=${{ env.SQLX_FEATURES }}
             --no-default-features
+            --features runtime-tokio-rustls
             --locked
 
       - name: Set up database
