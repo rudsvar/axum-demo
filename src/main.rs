@@ -1,6 +1,6 @@
 //! An example web service with axum.
 
-use axum_web_demo::{
+use axum_demo::{
     api::{grpc, rest},
     infra::config::{self, DatabaseConfig},
 };

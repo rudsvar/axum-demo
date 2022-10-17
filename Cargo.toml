@@ -61,6 +61,7 @@ config = "0.13.2"
 uuid = { version = "1.2.0", features = ["v4"] }
 bcrypt = "0.13.0"
 thiserror = "1.0.37"
+chrono = { version = "0.4.22", features = ["serde"] }
 
 [build-dependencies]
 tonic-build = "0.8"
