@@ -14,13 +14,13 @@ RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
 ENV SQLX_OFFLINE true
-RUN cargo build --release --bin axum-web-demo
+RUN cargo build --release --bin axum-demo
 
 FROM debian:buster-slim AS runtime
 WORKDIR /app
 RUN apt-get update
 RUN apt-get install -y libssl-dev
-COPY --from=builder /app/target/release/axum-web-demo /usr/local/bin
+COPY --from=builder /app/target/release/axum-demo /usr/local/bin
 COPY config.yaml config.yaml
-ENV RUST_LOG info,tracing_axum_web=warn,axum_web_demo=debug,sqlx=off
-ENTRYPOINT ["/usr/local/bin/axum-web-demo"]
+ENV RUST_LOG info,axum_web_demo=debug,sqlx=off
+ENTRYPOINT ["/usr/local/bin/axum-demo"]
