@@ -150,6 +150,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-demo"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-extra",
+ "bcrypt",
+ "config",
+ "hyper",
+ "opentelemetry 0.18.0",
+ "opentelemetry-jaeger",
+ "prost",
+ "reqwest",
+ "serde",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-appender",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "axum-extra"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -181,35 +210,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "axum-web-demo"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "axum-extra",
- "bcrypt",
- "config",
- "hyper",
- "opentelemetry 0.18.0",
- "opentelemetry-jaeger",
- "prost",
- "reqwest",
- "serde",
- "sqlx",
- "thiserror",
- "tokio",
- "tonic",
- "tonic-build",
- "tower",
- "tower-http",
- "tracing",
- "tracing-appender",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]
