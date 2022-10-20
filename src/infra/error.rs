@@ -21,22 +21,6 @@ impl ErrorResponse {
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
     #[error("{0}")]
-    ServiceError(#[from] ServiceError),
-}
-
-pub type ApiResult<T> = Result<T, ApiError>;
-
-impl IntoResponse for ApiError {
-    fn into_response(self) -> axum::response::Response {
-        match self {
-            ApiError::ServiceError(e) => e.into_response(),
-        }
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ServiceError {
-    #[error("{0}")]
     ValidationError(String),
     #[error("{0}")]
     DbError(#[from] sqlx::Error),
@@ -44,21 +28,23 @@ pub enum ServiceError {
     Unauthorized,
 }
 
-pub type ServiceResult<T> = Result<T, ServiceError>;
+pub type ApiResult<T> = Result<T, ApiError>;
 
-impl IntoResponse for ServiceError {
+impl IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
-        let message = self.to_string();
-        let status = match self {
-            ServiceError::ValidationError(_) => StatusCode::BAD_REQUEST,
-            ServiceError::DbError(e) => match e {
-                sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
+        let (message, status) = match self {
+            ApiError::ValidationError(e) => (e, StatusCode::BAD_REQUEST),
+            ApiError::DbError(e) => match e {
+                sqlx::Error::RowNotFound => ("not found".to_string(), StatusCode::NOT_FOUND),
                 e => {
-                    tracing::error!("database error: {}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR
+                    tracing::error!("database error: {}", e.to_string());
+                    (
+                        "internal error".to_string(),
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                    )
                 }
             },
-            ServiceError::Unauthorized => StatusCode::UNAUTHORIZED,
+            e @ ApiError::Unauthorized => (e.to_string(), StatusCode::UNAUTHORIZED),
         };
 
         (status, Json(ErrorResponse::new(message))).into_response()

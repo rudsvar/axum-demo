@@ -1,8 +1,7 @@
+use super::Tx;
+use crate::infra::error::ApiResult;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgConnection, Postgres, Transaction};
 use tracing::{instrument, Instrument};
-
-use crate::infra::error::ServiceResult;
 
 /// A new item.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -21,10 +20,7 @@ pub struct Item {
 
 /// Creates a new item.
 #[instrument(skip(tx))]
-pub async fn create_item(
-    tx: &mut Transaction<'static, Postgres>,
-    new_item: NewItem,
-) -> ServiceResult<Item> {
+pub async fn create_item(tx: &mut Tx, new_item: NewItem) -> ApiResult<Item> {
     tracing::info!("Creating item {:?}", new_item);
     let item = sqlx::query_as!(
         Item,
@@ -44,7 +40,7 @@ pub async fn create_item(
 
 /// Lists all items.
 #[instrument(skip(tx))]
-pub async fn list_items(tx: &mut PgConnection) -> ServiceResult<Vec<Item>> {
+pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
     tracing::info!("Listing items");
     let items = sqlx::query_as!(
         Item,

@@ -19,7 +19,7 @@ impl Greeter for MyGreeter {
 
         // Return an instance of type HelloReply
         tracing::debug!("gRPC in: {}", request.name);
-        let message = service::greeter::greet(&request.name);
+        let message = service::greet_service::greet(&request.name);
         tracing::debug!("gRPC out: {}", message);
 
         let reply = hello::HelloReply { message };

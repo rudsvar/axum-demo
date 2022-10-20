@@ -1,4 +1,4 @@
-use crate::infra::error::ServiceResult;
+use crate::infra::error::ApiResult;
 use sqlx::PgConnection;
 use tracing::instrument;
 
@@ -13,7 +13,7 @@ pub async fn authenticate(
     conn: &mut PgConnection,
     username: &str,
     password: &str,
-) -> ServiceResult<Option<i32>> {
+) -> ApiResult<Option<i32>> {
     tracing::info!("Fetching {}'s password", username);
     let user = sqlx::query_as!(
         User,

@@ -24,7 +24,9 @@ async fn create_item(
     Extension(db): Extension<PgPool>,
     Json(new_item): Json<NewItem>,
 ) -> ApiResult<Json<Item>> {
-    let item = item_service::create_item(db, new_item).await?;
+    let mut tx = db.begin().await?;
+    let item = item_service::create_item(&mut tx, new_item).await?;
+    tx.commit().await?;
     Ok(Json(item))
 }
 
@@ -34,7 +36,9 @@ pub async fn list_items(
     _: ItemsPath,
     Extension(db): Extension<PgPool>,
 ) -> ApiResult<Json<Vec<Item>>> {
-    let items = item_service::list_items(db).await?;
+    let mut tx = db.begin().await?;
+    let items = item_service::list_items(&mut tx).await?;
+    tx.commit().await?;
     Ok(Json(items))
 }
 

@@ -29,7 +29,7 @@ pub struct HelloPath;
 #[instrument]
 pub async fn hello_handler(_: HelloPath, Query(name): Query<Name>) -> Json<HelloResponse> {
     Json(HelloResponse {
-        greeting: service::greeter::greet(&name.name),
+        greeting: service::greet_service::greet(&name.name),
     })
 }
 

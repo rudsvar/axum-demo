@@ -1,26 +1,22 @@
 use crate::{
-    infra::error::ServiceResult,
-    repository::item_repository::{self, Item, NewItem},
+    infra::error::ApiResult,
+    repository::{
+        item_repository::{self, Item, NewItem},
+        Tx,
+    },
 };
-use sqlx::PgPool;
-use tracing::{instrument, Instrument};
+use tracing::instrument;
 
 /// Creates a new item.
-#[instrument(skip(db))]
-pub async fn create_item(db: PgPool, new_item: NewItem) -> ServiceResult<Item> {
-    let mut tx = db.begin().await?;
-    let item = item_repository::create_item(&mut tx, new_item).await?;
-    tx.commit().await?;
+#[instrument(skip(tx))]
+pub async fn create_item(tx: &mut Tx, new_item: NewItem) -> ApiResult<Item> {
+    let item = item_repository::create_item(tx, new_item).await?;
     Ok(item)
 }
 
 /// Lists all items.
-#[instrument(skip(db))]
-pub async fn list_items(db: PgPool) -> ServiceResult<Vec<Item>> {
-    let mut tx = db
-        .acquire()
-        .instrument(tracing::info_span!("acquire"))
-        .await?;
-    let items = item_repository::list_items(&mut tx).await?;
+#[instrument(skip(tx))]
+pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
+    let items = item_repository::list_items(tx).await?;
     Ok(items)
 }
