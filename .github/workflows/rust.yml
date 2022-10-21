@@ -22,7 +22,7 @@ jobs:
         ports:
           - 5432:5432
     env:
-      SQLX_VERSION: 0.5.5
+      SQLX_VERSION: 0.6.2
       SQLX_FEATURES: postgres
     steps:
       - uses: actions/checkout@v2
@@ -63,6 +63,9 @@ jobs:
 
       - name: Set up database
         run: sqlx database setup
+
+      - name: Verify that sqlx-data.json is up to date
+        run: cargo sqlx prepare --check
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1

@@ -1,5 +1,37 @@
 {
   "db": "PostgreSQL",
+  "16908cd933602950d0a8a1d539cbfd4bf7075d1cce4f305201a4e0afc70b71c7": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "password",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "role",
+          "ordinal": 2,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "\n        SELECT id, password, role FROM users\n        WHERE username = $1\n        "
+  },
   "5a60991465690584b3d674778a542d040e398dc211bcb2cf8a65a7ce9d654c02": {
     "describe": {
       "columns": [
@@ -62,31 +94,5 @@
       }
     },
     "query": "\n        INSERT INTO items (name, description)\n        VALUES ($1, $2)\n        RETURNING *\n        "
-  },
-  "cb012d3c19f6a6ae5d8835c45d6fe7e0f6ec814e4420b7e68375b3448e5f7b71": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int4"
-        },
-        {
-          "name": "password",
-          "ordinal": 1,
-          "type_info": "Varchar"
-        }
-      ],
-      "nullable": [
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      }
-    },
-    "query": "\n        SELECT id, password FROM users\n        WHERE username = $1\n        "
   }
 }
