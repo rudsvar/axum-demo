@@ -23,7 +23,7 @@ pub enum ApiError {
     #[error("{0}")]
     ClientError(#[from] ClientError),
     #[error("{0}")]
-    InternalError(InternalError),
+    InternalError(#[from] InternalError),
 }
 
 impl IntoResponse for ApiError {
@@ -46,6 +46,12 @@ impl From<sqlx::Error> for ApiError {
             sqlx::Error::RowNotFound => ApiError::ClientError(ClientError::NotFound),
             e => ApiError::InternalError(InternalError::SqlxError(e)),
         }
+    }
+}
+
+impl From<bcrypt::BcryptError> for ApiError {
+    fn from(e: bcrypt::BcryptError) -> Self {
+        ApiError::InternalError(InternalError::BcryptError(e))
     }
 }
 
@@ -78,6 +84,10 @@ impl IntoResponse for ClientError {
 pub enum InternalError {
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error),
+    #[error("missing extension: {0}")]
+    MissingExtension(String),
+    #[error("bcrypt error: {0}")]
+    BcryptError(#[from] bcrypt::BcryptError),
 }
 
 impl IntoResponse for InternalError {
