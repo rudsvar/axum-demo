@@ -23,7 +23,7 @@ jobs:
           - 5432:5432
     env:
       SQLX_VERSION: 0.6.2
-      SQLX_FEATURES: postgres,runtime-tokio-rustls
+      SQLX_FEATURES: "postgres,runtime-tokio-rustls"
     steps:
       - uses: actions/checkout@v2
 
