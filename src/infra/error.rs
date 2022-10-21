@@ -49,6 +49,12 @@ impl From<sqlx::Error> for ApiError {
     }
 }
 
+impl From<axum_sqlx_tx::Error> for ApiError {
+    fn from(e: axum_sqlx_tx::Error) -> Self {
+        ApiError::InternalError(InternalError::AxumSqlxTxError(e))
+    }
+}
+
 impl From<bcrypt::BcryptError> for ApiError {
     fn from(e: bcrypt::BcryptError) -> Self {
         ApiError::InternalError(InternalError::BcryptError(e))
@@ -84,6 +90,8 @@ impl IntoResponse for ClientError {
 pub enum InternalError {
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error),
+    #[error("{0}")]
+    AxumSqlxTxError(#[from] axum_sqlx_tx::Error),
     #[error("missing extension: {0}")]
     MissingExtension(String),
     #[error("bcrypt error: {0}")]
