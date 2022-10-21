@@ -1,5 +1,5 @@
 use crate::{
-    infra::error::{ApiError, ApiResult},
+    infra::error::{ApiResult, ClientError},
     repository::user_repository,
 };
 use axum::{
@@ -36,7 +36,7 @@ pub async fn login(
     tracing::info!("Authenticating user");
     let id = user_repository::authenticate(&mut conn, username, password).await?;
     tracing::info!("Returning");
-    let id = id.map(Json).ok_or(ApiError::Unauthorized)?;
+    let id = id.map(Json).ok_or(ClientError::Unauthorized)?;
     Ok(id)
 }
 
@@ -47,7 +47,7 @@ mod tests {
 
     use crate::{
         api::rest::user_api::{login, LoginPath},
-        infra::error::ApiError,
+        infra::error::{ApiError, ClientError},
     };
 
     #[sqlx::test]
@@ -67,6 +67,9 @@ mod tests {
         let error = login(LoginPath, Extension(db), basic_auth)
             .await
             .unwrap_err();
-        assert!(matches!(error, ApiError::Unauthorized,));
+        assert!(matches!(
+            error,
+            ApiError::ClientError(ClientError::Unauthorized)
+        ));
     }
 }

@@ -21,32 +21,71 @@ impl ErrorResponse {
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
     #[error("{0}")]
-    ValidationError(String),
+    ClientError(#[from] ClientError),
     #[error("{0}")]
-    DbError(#[from] sqlx::Error),
-    #[error("unauthorized")]
-    Unauthorized,
+    InternalError(InternalError),
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            ApiError::ClientError(e) => e.into_response(),
+            ApiError::InternalError(e) => {
+                tracing::error!("internal error: {}", e);
+                e.into_response()
+            }
+        }
+    }
 }
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
-impl IntoResponse for ApiError {
-    fn into_response(self) -> axum::response::Response {
-        let (message, status) = match self {
-            ApiError::ValidationError(e) => (e, StatusCode::BAD_REQUEST),
-            ApiError::DbError(e) => match e {
-                sqlx::Error::RowNotFound => ("not found".to_string(), StatusCode::NOT_FOUND),
-                e => {
-                    tracing::error!("database error: {}", e.to_string());
-                    (
-                        "internal error".to_string(),
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                    )
-                }
-            },
-            e @ ApiError::Unauthorized => (e.to_string(), StatusCode::UNAUTHORIZED),
-        };
+impl From<sqlx::Error> for ApiError {
+    fn from(e: sqlx::Error) -> Self {
+        match e {
+            sqlx::Error::RowNotFound => ApiError::ClientError(ClientError::NotFound),
+            e => ApiError::InternalError(InternalError::SqlxError(e)),
+        }
+    }
+}
 
-        (status, Json(ErrorResponse::new(message))).into_response()
+#[derive(Debug, thiserror::Error)]
+pub enum ClientError {
+    #[error("{0}")]
+    BadRequest(String),
+    #[error("unauthorized")]
+    Unauthorized,
+    #[error("forbidden")]
+    Forbidden,
+    #[error("not found")]
+    NotFound,
+}
+
+impl IntoResponse for ClientError {
+    fn into_response(self) -> axum::response::Response {
+        let msg = self.to_string();
+        let status = match self {
+            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::Unauthorized => StatusCode::UNAUTHORIZED,
+            Self::Forbidden => StatusCode::FORBIDDEN,
+            Self::NotFound => StatusCode::NOT_FOUND,
+        };
+        (status, Json(ErrorResponse::new(msg))).into_response()
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum InternalError {
+    #[error("{0}")]
+    SqlxError(#[from] sqlx::Error),
+}
+
+impl IntoResponse for InternalError {
+    fn into_response(self) -> axum::response::Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse::new("internal error".to_string())),
+        )
+            .into_response()
     }
 }
