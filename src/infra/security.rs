@@ -81,7 +81,7 @@ where
             Ok(User {
                 id: user.id,
                 role: user.role,
-                role_type: PhantomData::default(),
+                role_type: PhantomData,
             })
         } else {
             Err(ClientError::Forbidden)?
@@ -120,7 +120,7 @@ pub async fn authenticate(
         Ok(User {
             id: user.id,
             role: user.role,
-            role_type: PhantomData::default(),
+            role_type: PhantomData,
         })
     } else {
         Err(ClientError::Unauthorized.into())
