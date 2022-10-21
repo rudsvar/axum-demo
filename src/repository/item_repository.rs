@@ -1,5 +1,4 @@
-use super::Tx;
-use crate::infra::error::ApiResult;
+use crate::infra::{database::Tx, error::ApiResult};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Instrument};
 

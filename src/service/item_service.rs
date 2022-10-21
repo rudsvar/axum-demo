@@ -1,9 +1,6 @@
 use crate::{
-    infra::error::ApiResult,
-    repository::{
-        item_repository::{self, Item, NewItem},
-        Tx,
-    },
+    infra::{database::Tx, error::ApiResult},
+    repository::item_repository::{self, Item, NewItem},
 };
 use tracing::instrument;
 

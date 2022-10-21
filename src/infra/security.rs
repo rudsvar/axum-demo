@@ -1,5 +1,7 @@
-use super::error::{ApiError, ApiResult, ClientError, InternalError};
-use crate::repository::DbPool;
+use super::{
+    database::DbPool,
+    error::{ApiError, ApiResult, ClientError, InternalError},
+};
 use axum::{
     async_trait,
     extract::FromRequest,
