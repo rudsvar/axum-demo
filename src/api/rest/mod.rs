@@ -89,3 +89,47 @@ where
 
     Ok(bytes)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        api::rest::{axum_server, hello::HelloResponse},
+        infra::database::DbPool,
+    };
+    use std::net::TcpListener;
+
+    #[sqlx::test]
+    fn hello_test(db: DbPool) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(axum_server(listener, db));
+
+        let url = format!("http://127.0.0.1:{}/hello?name=World", port);
+        let response: HelloResponse = reqwest::get(url).await.unwrap().json().await.unwrap();
+
+        assert_eq!("Hello, World!", response.greeting());
+    }
+
+    #[sqlx::test]
+    fn user_test(db: DbPool) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(axum_server(listener, db));
+
+        let url = format!("http://127.0.0.1:{}/user", port);
+        let client = reqwest::ClientBuilder::default().build().unwrap();
+        let response: i32 = client
+            .get(url)
+            .basic_auth("user", Some("user"))
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap()
+            .parse()
+            .unwrap();
+
+        assert_eq!(1, response);
+    }
+}

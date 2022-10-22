@@ -21,6 +21,12 @@ pub struct HelloResponse {
     greeting: String,
 }
 
+impl HelloResponse {
+    pub fn greeting(&self) -> &str {
+        self.greeting.as_ref()
+    }
+}
+
 #[derive(TypedPath, Deserialize)]
 #[typed_path("/hello")]
 pub struct HelloPath;
