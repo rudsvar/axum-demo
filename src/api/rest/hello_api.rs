@@ -38,8 +38,9 @@ impl Greeting {
 )]
 #[instrument]
 pub async fn hello(Query(name): Query<Name>) -> Json<Greeting> {
+    let name = name.name.as_deref().unwrap_or("World");
     Json(Greeting {
-        greeting: service::greet_service::greet(name.name.as_deref().unwrap_or("World")),
+        greeting: service::greet_service::greet(name),
     })
 }
 
