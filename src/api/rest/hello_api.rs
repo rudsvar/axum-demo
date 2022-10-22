@@ -33,7 +33,7 @@ impl Greeting {
     path = "/hello",
     params(Name),
     responses(
-        (status = 200, description = "Success", body = HelloResponse),
+        (status = 200, description = "Success", body = Greeting),
     )
 )]
 #[instrument]
