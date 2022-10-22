@@ -51,15 +51,27 @@ mod tests {
     use axum::extract::Query;
 
     #[sqlx::test]
+    async fn hello_without_name_defaults_to_world() {
+        let response = hello(Query(Name { name: None })).await;
+
+        assert_eq!(
+            Greeting {
+                greeting: "Hello, World!".to_string(),
+            },
+            response.0
+        );
+    }
+
+    #[sqlx::test]
     async fn hello_test() {
         let response = hello(Query(Name {
-            name: Some("World".to_string()),
+            name: Some("NotWorld".to_string()),
         }))
         .await;
 
         assert_eq!(
             Greeting {
-                greeting: "Hello, World!".to_string(),
+                greeting: "Hello, NotWorld!".to_string(),
             },
             response.0
         );
