@@ -2,19 +2,31 @@ use axum::{response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(PartialEq, Eq, Serialize, Deserialize)]
-pub struct ErrorResponse {
+/// A standard error response body.
+#[derive(PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct ErrorBody {
+    /// A description of the error.
     message: String,
+    /// When the error happened.
     timestamp: DateTime<Utc>,
 }
 
-impl ErrorResponse {
+impl ErrorBody {
     pub(crate) fn new(message: String) -> Self {
         Self {
             message,
             timestamp: Utc::now(),
         }
+    }
+
+    pub fn message(&self) -> &str {
+        self.message.as_ref()
+    }
+
+    pub fn timestamp(&self) -> DateTime<Utc> {
+        self.timestamp
     }
 }
 
@@ -44,6 +56,9 @@ impl From<sqlx::Error> for ApiError {
     fn from(e: sqlx::Error) -> Self {
         match e {
             sqlx::Error::RowNotFound => ApiError::ClientError(ClientError::NotFound),
+            sqlx::Error::Database(e) if e.constraint().is_some() => {
+                ApiError::ClientError(ClientError::Conflict)
+            }
             e => ApiError::InternalError(InternalError::SqlxError(e)),
         }
     }
@@ -71,6 +86,8 @@ pub enum ClientError {
     Forbidden,
     #[error("not found")]
     NotFound,
+    #[error("conflict")]
+    Conflict,
 }
 
 impl IntoResponse for ClientError {
@@ -81,8 +98,9 @@ impl IntoResponse for ClientError {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
+            Self::Conflict => StatusCode::CONFLICT,
         };
-        (status, Json(ErrorResponse::new(msg))).into_response()
+        (status, Json(ErrorBody::new(msg))).into_response()
     }
 }
 
@@ -102,7 +120,7 @@ impl IntoResponse for InternalError {
     fn into_response(self) -> axum::response::Response {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse::new("internal error".to_string())),
+            Json(ErrorBody::new("internal error".to_string())),
         )
             .into_response()
     }

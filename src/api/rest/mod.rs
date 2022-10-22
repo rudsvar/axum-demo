@@ -1,10 +1,9 @@
-use crate::shutdown;
+use crate::{repository::item_repository, shutdown};
 use axum::{
     body::Bytes,
     middleware::{self, Next},
     response::IntoResponse,
-    routing::post,
-    Extension, Router,
+    Router,
 };
 use hyper::{
     header::{HeaderName, AUTHORIZATION},
@@ -19,21 +18,61 @@ use tower_http::{
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
+use utoipa::{
+    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
+    Modify, OpenApi,
+};
+use utoipa_swagger_ui::SwaggerUi;
 
-pub mod hello;
+pub mod hello_api;
 pub mod item_api;
 pub mod user_api;
 
 static X_REQUEST_ID: &str = "x-request-id";
 
+// OpenApi configuration.
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        hello_api::hello,
+        item_api::create_item,
+        item_api::list_items,
+        user_api::user,
+        user_api::admin,
+    ),
+    components(
+        schemas(
+            hello_api::Greeting,
+            item_repository::NewItem,
+            item_repository::Item,
+            crate::infra::error::ErrorBody)
+    ),
+    modifiers(&SecurityAddon)
+)]
+struct ApiDoc;
+
+/// Security settings
+struct SecurityAddon;
+
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "basic",
+                SecurityScheme::Http(Http::new(HttpAuthScheme::Basic)),
+            )
+        }
+    }
+}
+
 pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
     let request_id = HeaderName::from_static(X_REQUEST_ID);
     let app = Router::new()
-        .route("/", post(|| async move { "Hello from `POST /`" }))
-        .merge(hello::hello_routes())
+        .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .merge(hello_api::hello_routes())
         .merge(item_api::item_routes())
         .merge(user_api::user_routes())
-        .layer(Extension(db))
+        .layer(axum_sqlx_tx::Layer::new(db))
         .layer(middleware::from_fn(print_request_response))
         .layer(PropagateHeaderLayer::new(request_id.clone()))
         .layer(
@@ -93,43 +132,141 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::rest::{axum_server, hello::HelloResponse},
-        infra::database::DbPool,
+        api::rest::{axum_server, hello_api::Greeting},
+        infra::{database::DbPool, error::ErrorBody},
     };
+    use serde::Deserialize;
     use std::net::TcpListener;
 
-    #[sqlx::test]
-    fn hello_test(db: DbPool) {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    async fn spawn_server(db: DbPool) -> String {
+        let address = "127.0.0.1";
+        let listener = TcpListener::bind(format!("{}:0", address)).unwrap();
         let port = listener.local_addr().unwrap().port();
         tokio::spawn(axum_server(listener, db));
+        format!("http://{}:{}", address, port)
+    }
 
-        let url = format!("http://127.0.0.1:{}/hello?name=World", port);
-        let response: HelloResponse = reqwest::get(url).await.unwrap().json().await.unwrap();
+    async fn get<T: for<'a> Deserialize<'a>>(url: &str) -> T {
+        let client = reqwest::ClientBuilder::default().build().unwrap();
+        client.get(url).send().await.unwrap().json().await.unwrap()
+    }
 
+    #[sqlx::test]
+    fn hello_gives_correct_response(db: DbPool) {
+        let url = spawn_server(db).await;
+        let response: Greeting = get(&format!("{}/hello?name=World", url)).await;
         assert_eq!("Hello, World!", response.greeting());
     }
 
     #[sqlx::test]
-    fn user_test(db: DbPool) {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        tokio::spawn(axum_server(listener, db));
+    fn non_user_cannot_sign_in(db: DbPool) {
+        let url = spawn_server(db).await;
+        let client = reqwest::ClientBuilder::default().build().unwrap();
+        let response: ErrorBody = client
+            .get(&format!("{}/user", url))
+            .basic_auth("notuser", Some("user"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!("unauthorized", response.message());
+    }
 
-        let url = format!("http://127.0.0.1:{}/user", port);
+    #[sqlx::test]
+    fn user_can_access_user_endpoint(db: DbPool) {
+        let url = spawn_server(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: i32 = client
-            .get(url)
+            .get(&format!("{}/user", url))
             .basic_auth("user", Some("user"))
             .send()
             .await
             .unwrap()
-            .text()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(1, response);
+    }
+
+    #[sqlx::test]
+    fn user_with_wrong_password_gives_401(db: DbPool) {
+        let url = spawn_server(db).await;
+        let client = reqwest::ClientBuilder::default().build().unwrap();
+        let response: ErrorBody = client
+            .get(&format!("{}/user", url))
+            .basic_auth("user", Some("notuser"))
+            .send()
             .await
             .unwrap()
-            .parse()
+            .json()
+            .await
             .unwrap();
+        assert_eq!("unauthorized", response.message());
+    }
 
-        assert_eq!(1, response);
+    #[sqlx::test]
+    fn user_cannot_access_admin_endpoint(db: DbPool) {
+        let url = spawn_server(db).await;
+        let client = reqwest::ClientBuilder::default().build().unwrap();
+        let response: ErrorBody = client
+            .get(&format!("{}/admin", url))
+            .basic_auth("user", Some("user"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!("forbidden", response.message());
+    }
+
+    #[sqlx::test]
+    fn admin_can_access_admin_endpoint(db: DbPool) {
+        let url = spawn_server(db).await;
+        let client = reqwest::ClientBuilder::default().build().unwrap();
+        let response: i32 = client
+            .get(&format!("{}/admin", url))
+            .basic_auth("admin", Some("admin"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(2, response);
+    }
+
+    #[sqlx::test]
+    fn admin_can_access_user_endpoint(db: DbPool) {
+        let url = spawn_server(db).await;
+        let client = reqwest::ClientBuilder::default().build().unwrap();
+        let response: i32 = client
+            .get(&format!("{}/user", url))
+            .basic_auth("admin", Some("admin"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(2, response);
+    }
+
+    #[sqlx::test]
+    fn admin_with_wrong_password_gives_401(db: DbPool) {
+        let url = spawn_server(db).await;
+        let client = reqwest::ClientBuilder::default().build().unwrap();
+        let response: ErrorBody = client
+            .get(&format!("{}/admin", url))
+            .basic_auth("admin", Some("notadmin"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!("unauthorized", response.message());
     }
 }

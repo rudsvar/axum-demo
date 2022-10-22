@@ -12,6 +12,18 @@ pub fn user_routes() -> Router {
 }
 
 /// Authenticates a user.
+#[utoipa::path(
+    get,
+    path = "/user",
+    responses(
+        (status = 200, description = "Ok", body = i32),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 500, description = "Internal error", body = ErrorBody),
+    ),
+    security(
+        ("basic" = [])
+    )
+)]
 #[instrument]
 pub async fn user(user: User) -> ApiResult<Json<i32>> {
     tracing::info!("User logged in");
@@ -19,6 +31,19 @@ pub async fn user(user: User) -> ApiResult<Json<i32>> {
 }
 
 /// Authenticates an admin user.
+#[utoipa::path(
+    get,
+    path = "/admin",
+    responses(
+        (status = 200, description = "Ok", body = i32),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 403, description = "Forbidden", body = ErrorBody),
+        (status = 500, description = "Internal error", body = ErrorBody),
+    ),
+    security(
+        ("basic" = [])
+    )
+)]
 #[instrument]
 pub async fn admin(user: User<Admin>) -> ApiResult<Json<i32>> {
     tracing::info!("Admin logged in");

@@ -1,5 +1,5 @@
 use super::{
-    database::DbPool,
+    database::Tx,
     error::{ApiError, ApiResult, ClientError, InternalError},
 };
 use axum::{
@@ -8,21 +8,27 @@ use axum::{
     headers::{authorization::Basic, Authorization},
     TypedHeader,
 };
-use sqlx::PgConnection;
+use sqlx::Postgres;
 use std::marker::PhantomData;
 use tracing::instrument;
 
-#[derive(Debug)]
 pub struct Any;
 
-#[derive(Debug)]
 pub struct Admin;
 
-#[derive(Debug)]
 pub struct User<Role = Any> {
     id: i32,
     role: String,
     role_type: PhantomData<Role>,
+}
+
+impl<Role> std::fmt::Debug for User<Role> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("User")
+            .field("id", &self.id)
+            .field("role", &self.role)
+            .finish()
+    }
 }
 
 impl<Role> User<Role> {
@@ -52,12 +58,10 @@ where
             .map_err(|_| ClientError::Unauthorized)?;
 
         // Get db connection
-        let db = req
-            .extensions()
-            .get::<DbPool>()
-            .ok_or_else(|| InternalError::MissingExtension("database pool".to_string()))?
-            .clone();
-        let mut tx = db.acquire().await.map_err(InternalError::SqlxError)?;
+        let mut tx = req
+            .extract::<axum_sqlx_tx::Tx<Postgres>>()
+            .await
+            .map_err(|_| InternalError::MissingExtension("transaction".to_string()))?;
 
         // Authenticate user
         let user = authenticate(&mut tx, auth.username(), auth.password()).await?;
@@ -97,11 +101,7 @@ struct UserRow {
 
 /// Validate a user's password.
 #[instrument(skip(conn, password))]
-pub async fn authenticate(
-    conn: &mut PgConnection,
-    username: &str,
-    password: &str,
-) -> ApiResult<User> {
+pub async fn authenticate(conn: &mut Tx, username: &str, password: &str) -> ApiResult<User> {
     tracing::info!("Fetching {}'s password", username);
     let user = sqlx::query_as!(
         UserRow,
@@ -111,8 +111,9 @@ pub async fn authenticate(
         "#,
         username
     )
-    .fetch_one(conn)
-    .await?;
+    .fetch_optional(conn)
+    .await?
+    .ok_or(ClientError::Unauthorized)?;
 
     tracing::info!("Verifying password");
     let password_is_ok = bcrypt::verify(password, &user.password)?;
@@ -130,27 +131,31 @@ pub async fn authenticate(
 #[cfg(test)]
 mod tests {
     use super::authenticate;
-    use crate::infra::error::{ApiError, ClientError};
-    use sqlx::{pool::PoolConnection, Postgres};
+    use crate::infra::{
+        database::DbPool,
+        error::{ApiError, ClientError},
+    };
 
-    #[sqlx::test(fixtures("users"))]
-    async fn user_with_correct_password_can_login(mut conn: PoolConnection<Postgres>) {
+    #[sqlx::test]
+    async fn user_with_correct_password_can_login(db: DbPool) {
+        let mut tx = db.begin().await.unwrap();
         let username = "user";
         let password = "user";
-        let user = authenticate(&mut conn, username, password).await.unwrap();
+        let user = authenticate(&mut tx, username, password).await.unwrap();
         assert_eq!(1, user.id());
 
         let username = "admin";
         let password = "admin";
-        let user = authenticate(&mut conn, username, password).await.unwrap();
+        let user = authenticate(&mut tx, username, password).await.unwrap();
         assert_eq!(2, user.id());
     }
 
-    #[sqlx::test(fixtures("users"))]
-    async fn user_with_incorrect_password_can_login(mut conn: PoolConnection<Postgres>) {
+    #[sqlx::test]
+    async fn user_with_incorrect_password_can_login(db: DbPool) {
+        let mut tx = db.begin().await.unwrap();
         let username = "user";
         let password = "notuser";
-        let result = authenticate(&mut conn, username, password).await;
+        let result = authenticate(&mut tx, username, password).await;
         assert!(matches!(
             result,
             Err(ApiError::ClientError(ClientError::Unauthorized))

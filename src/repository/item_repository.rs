@@ -1,19 +1,24 @@
 use crate::infra::{database::Tx, error::ApiResult};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Instrument};
+use utoipa::ToSchema;
 
 /// A new item.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct NewItem {
+    #[schema(example = "MyItem")]
     pub name: String,
+    #[schema(example = "A very interesting item")]
     pub description: Option<String>,
 }
 
 /// An existing item.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct Item {
     pub id: i32,
+    #[schema(example = "MyItem")]
     pub name: String,
+    #[schema(example = "A very interesting item")]
     pub description: Option<String>,
 }
 
