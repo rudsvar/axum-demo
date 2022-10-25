@@ -1,3 +1,8 @@
+//! Types and functions for reporting errors from services.
+//!
+//! If your function interacts with the database or validates user input,
+//! you likely want to return a [`ApiResult`].
+
 use axum::{response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
@@ -5,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// A standard error response body.
-#[derive(PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct ErrorBody {
     /// A description of the error.
     message: String,
@@ -21,19 +26,24 @@ impl ErrorBody {
         }
     }
 
+    /// The error message.
     pub fn message(&self) -> &str {
         self.message.as_ref()
     }
 
+    /// When the error happened.
     pub fn timestamp(&self) -> DateTime<Utc> {
         self.timestamp
     }
 }
 
+/// An error from our API.
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
+    /// An error caused by the client.
     #[error("{0}")]
     ClientError(#[from] ClientError),
+    /// An internal error.
     #[error("{0}")]
     InternalError(#[from] InternalError),
 }
@@ -50,6 +60,7 @@ impl IntoResponse for ApiError {
     }
 }
 
+/// The result of calling API-related functions.
 pub type ApiResult<T> = Result<T, ApiError>;
 
 impl From<sqlx::Error> for ApiError {
@@ -76,16 +87,23 @@ impl From<bcrypt::BcryptError> for ApiError {
     }
 }
 
+/// Errors caused by the client.
+/// The client can do something to fix these.
 #[derive(Debug, thiserror::Error)]
 pub enum ClientError {
+    /// Input validation failed, or some illegal operation was attempted.
     #[error("{0}")]
     BadRequest(String),
+    /// Missing or bad credentials.
     #[error("unauthorized")]
     Unauthorized,
+    /// The user is not allowed to access the resource.
     #[error("forbidden")]
     Forbidden,
+    /// The resource was not found.
     #[error("not found")]
     NotFound,
+    /// The resource already exists.
     #[error("conflict")]
     Conflict,
 }
@@ -104,14 +122,20 @@ impl IntoResponse for ClientError {
     }
 }
 
+/// An internal error.
+/// The client cannot do anything about this.
 #[derive(Debug, thiserror::Error)]
 pub enum InternalError {
+    /// An [`sqlx`] error.
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error),
+    /// An [`axum_sqlx_tx`] error.
     #[error("{0}")]
     AxumSqlxTxError(#[from] axum_sqlx_tx::Error),
+    /// An axum extension was not set.
     #[error("missing extension: {0}")]
     MissingExtension(String),
+    /// Bcrypt failed to perform some operation.
     #[error("bcrypt error: {0}")]
     BcryptError(#[from] bcrypt::BcryptError),
 }

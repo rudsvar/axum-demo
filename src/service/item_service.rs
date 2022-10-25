@@ -1,3 +1,5 @@
+//! A service for interacting with items.
+
 use crate::{
     infra::{database::Tx, error::ApiResult},
     repository::item_repository::{self, Item, NewItem},

@@ -1,3 +1,5 @@
+//! The item API implementation.
+
 use crate::{
     infra::error::ApiResult,
     repository::item_repository::{Item, NewItem},
@@ -7,21 +9,16 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use axum_extra::routing::TypedPath;
 use axum_sqlx_tx::Tx;
-use serde::Deserialize;
 use sqlx::Postgres;
 use tracing::instrument;
 
+/// The item API endpoints.
 pub fn item_routes() -> Router {
     Router::new()
         .route("/items", post(create_item))
         .route("/items", get(list_items))
 }
-
-#[derive(TypedPath, Deserialize)]
-#[typed_path("/items")]
-pub struct ItemsPath;
 
 /// Creates a new item.
 #[utoipa::path(

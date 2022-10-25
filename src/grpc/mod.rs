@@ -1,11 +1,14 @@
+//! gRPC API implementations.
+
 use crate::{
-    api::grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},
+    grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},
     shutdown,
 };
 use std::net::SocketAddr;
 
 pub mod greeter;
 
+/// Starts a tonic server serving our gRPC API on the specified address.
 pub async fn tonic_server(addr: SocketAddr) -> Result<(), tonic::transport::Error> {
     tracing::info!("Starting tonic on {}", addr);
     let grpc_server = tonic::transport::Server::builder()

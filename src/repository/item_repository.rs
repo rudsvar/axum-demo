@@ -1,3 +1,5 @@
+//! The persistence layer. Types and functions for storing and loading items from the database.
+
 use crate::infra::{database::Tx, error::ApiResult};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Instrument};
@@ -6,8 +8,10 @@ use utoipa::ToSchema;
 /// A new item.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct NewItem {
+    /// The item's name.
     #[schema(example = "MyItem")]
     pub name: String,
+    /// The item's description.
     #[schema(example = "A very interesting item")]
     pub description: Option<String>,
 }
@@ -15,10 +19,13 @@ pub struct NewItem {
 /// An existing item.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct Item {
+    /// The item's id.
     pub id: i32,
     #[schema(example = "MyItem")]
+    /// The item's name.
     pub name: String,
     #[schema(example = "A very interesting item")]
+    /// The item's description.
     pub description: Option<String>,
 }
 

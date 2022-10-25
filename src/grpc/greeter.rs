@@ -1,12 +1,17 @@
+//! Implementation of a gRPC hello service.
+
 use self::hello::{greeter_server::Greeter, HelloReply, HelloRequest};
 use crate::service;
 use tonic::Status;
 
-pub mod hello {
+/// Generated traits and types for the hello gRPC API.
+#[allow(clippy::derive_partial_eq_without_eq)]
+pub(super) mod hello {
     tonic::include_proto!("hello"); // The string specified here must match the proto package name
 }
 
-#[derive(Debug, Default)]
+/// An struct that should implement [`MyGreeter`].
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MyGreeter {}
 
 #[tonic::async_trait]
@@ -30,7 +35,7 @@ impl Greeter for MyGreeter {
 
 #[cfg(test)]
 mod tests {
-    use crate::api::grpc::greeter::{
+    use crate::grpc::greeter::{
         hello::{greeter_server::Greeter, HelloRequest},
         MyGreeter,
     };

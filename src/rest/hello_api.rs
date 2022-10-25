@@ -1,9 +1,12 @@
+//! Implementation of the hello API. An API that returns a greeting based on a query parameter.
+
 use crate::service;
 use axum::{extract::Query, routing::get, Json, Router};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use utoipa::{IntoParams, ToSchema};
 
+///
 pub fn hello_routes() -> Router {
     Router::new().route("/hello", get(hello))
 }
@@ -22,6 +25,7 @@ pub struct Greeting {
 }
 
 impl Greeting {
+    /// Returns the greeting.
     pub fn greeting(&self) -> &str {
         self.greeting.as_ref()
     }
@@ -47,7 +51,7 @@ pub async fn hello(Query(name): Query<Name>) -> Json<Greeting> {
 #[cfg(test)]
 mod tests {
     use super::Greeting;
-    use crate::api::rest::hello_api::{hello, Name};
+    use crate::rest::hello_api::{hello, Name};
     use axum::extract::Query;
 
     #[sqlx::test]

@@ -1,3 +1,5 @@
+//! Types and functions related to security.
+
 use super::{
     database::Tx,
     error::{ApiError, ApiResult, ClientError, InternalError},
@@ -12,14 +14,32 @@ use sqlx::Postgres;
 use std::marker::PhantomData;
 use tracing::instrument;
 
+/// Any user role.
+#[derive(Clone, Copy, Debug)]
 pub struct Any;
 
+/// The admin role.
+#[derive(Clone, Copy, Debug)]
 pub struct Admin;
 
+/// An authenticated user.
+/// This can only be constructed from a request.
 pub struct User<Role = Any> {
     id: i32,
     role: String,
     role_type: PhantomData<Role>,
+}
+
+impl<Role> User<Role> {
+    /// The id of the user.
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+
+    /// The role of the user.
+    pub fn role(&self) -> &str {
+        self.role.as_ref()
+    }
 }
 
 impl<Role> std::fmt::Debug for User<Role> {
@@ -28,16 +48,6 @@ impl<Role> std::fmt::Debug for User<Role> {
             .field("id", &self.id)
             .field("role", &self.role)
             .finish()
-    }
-}
-
-impl<Role> User<Role> {
-    pub fn id(&self) -> i32 {
-        self.id
-    }
-
-    pub fn role(&self) -> &str {
-        self.role.as_ref()
     }
 }
 

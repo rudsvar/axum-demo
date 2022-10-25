@@ -1,3 +1,5 @@
+//! REST API endpoint implementations.
+
 use crate::{repository::item_repository, shutdown};
 use axum::{
     body::Bytes,
@@ -65,13 +67,21 @@ impl Modify for SecurityAddon {
     }
 }
 
+/// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
     let request_id = HeaderName::from_static(X_REQUEST_ID);
     let app = Router::new()
+        // Swagger ui
         .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
-        .merge(hello_api::hello_routes())
-        .merge(item_api::item_routes())
-        .merge(user_api::user_routes())
+        // API
+        .nest(
+            "/api",
+            Router::new()
+                .merge(hello_api::hello_routes())
+                .merge(item_api::item_routes())
+                .merge(user_api::user_routes()),
+        )
+        // Layers
         .layer(axum_sqlx_tx::Layer::new(db))
         .layer(middleware::from_fn(print_request_response))
         .layer(PropagateHeaderLayer::new(request_id.clone()))
@@ -83,6 +93,8 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
         .into_make_service();
+
+    // Start server
     tracing::info!("Starting axum on {:?}", addr.local_addr());
     let axum_server = axum::Server::from_tcp(addr)?
         .serve(app)
@@ -132,8 +144,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::rest::{axum_server, hello_api::Greeting},
         infra::{database::DbPool, error::ErrorBody},
+        rest::{axum_server, hello_api::Greeting},
     };
     use serde::Deserialize;
     use std::net::TcpListener;
@@ -143,7 +155,7 @@ mod tests {
         let listener = TcpListener::bind(format!("{}:0", address)).unwrap();
         let port = listener.local_addr().unwrap().port();
         tokio::spawn(axum_server(listener, db));
-        format!("http://{}:{}", address, port)
+        format!("http://{}:{}/api", address, port)
     }
 
     async fn get<T: for<'a> Deserialize<'a>>(url: &str) -> T {

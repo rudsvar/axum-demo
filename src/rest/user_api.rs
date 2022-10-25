@@ -1,3 +1,5 @@
+//! The user API implementation.
+
 use crate::infra::{
     error::ApiResult,
     security::{Admin, User},
@@ -5,6 +7,7 @@ use crate::infra::{
 use axum::{routing::get, Json, Router};
 use tracing::instrument;
 
+/// The user API endpoints.
 pub fn user_routes() -> Router {
     Router::new()
         .route("/user", get(user))
