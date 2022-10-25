@@ -22,10 +22,9 @@
 //! The REST API can be seen at `http://localhost:8080/swagger-ui/index.html`,
 //! and the gRPC contracts can be found in the `./proto`-folder.
 
-pub mod grpc;
 pub mod infra;
 pub mod repository;
-pub mod rest;
+pub mod api;
 pub mod service;
 
 /// Completes when when ctrl-c is pressed.

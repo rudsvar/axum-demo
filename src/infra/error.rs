@@ -1,4 +1,4 @@
-//! Types and functions for reporting errors from services.
+//! Types for reporting errors that happened during a request.
 //!
 //! If your function interacts with the database or validates user input,
 //! you likely want to return a [`ApiResult`].

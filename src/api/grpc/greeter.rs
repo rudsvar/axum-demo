@@ -35,7 +35,7 @@ impl Greeter for MyGreeter {
 
 #[cfg(test)]
 mod tests {
-    use crate::grpc::greeter::{
+    use crate::api::grpc::greeter::{
         hello::{greeter_server::Greeter, HelloRequest},
         MyGreeter,
     };

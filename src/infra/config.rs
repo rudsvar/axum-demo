@@ -1,4 +1,4 @@
-//! Structs and functions for reading application configuration from a file.
+//! For reading application configuration.
 
 use serde::Deserialize;
 
@@ -39,7 +39,7 @@ pub struct DatabaseConfig {
     pub database_name: String,
 }
 
-/// Retrieve [`Settings`] from the default configuration file.
+/// Retrieve [`Config`] from the default configuration file.
 #[tracing::instrument]
 pub fn load_config() -> anyhow::Result<Config> {
     let settings = config::Config::builder()

@@ -1,4 +1,4 @@
-//! Types and functions for interacting with the database.
+//! For interacting with the database.
 
 use super::config::DatabaseConfig;
 use sqlx::{

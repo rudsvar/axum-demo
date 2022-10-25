@@ -1,4 +1,4 @@
-//! Types and functions related to security.
+//! Types and utility functions relating to security.
 
 use super::{
     database::Tx,

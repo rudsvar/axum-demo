@@ -1,4 +1,4 @@
-//! The persistence layer. Types and functions for storing and loading items from the database.
+//! Types and functions for storing and loading items from the database.
 
 use crate::infra::{database::Tx, error::ApiResult};
 use serde::{Deserialize, Serialize};

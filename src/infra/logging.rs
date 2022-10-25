@@ -1,4 +1,4 @@
-//! Types and functions for setting up logging.
+//! For setting up logging.
 
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};

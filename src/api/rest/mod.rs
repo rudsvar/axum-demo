@@ -1,4 +1,4 @@
-//! REST API endpoint implementations.
+//! REST API implementations.
 
 use crate::{repository::item_repository, shutdown};
 use axum::{
@@ -144,8 +144,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
+        api::rest::{axum_server, hello_api::Greeting},
         infra::{database::DbPool, error::ErrorBody},
-        rest::{axum_server, hello_api::Greeting},
     };
     use serde::Deserialize;
     use std::net::TcpListener;

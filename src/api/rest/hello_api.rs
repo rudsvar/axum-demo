@@ -51,7 +51,7 @@ pub async fn hello(Query(name): Query<Name>) -> Json<Greeting> {
 #[cfg(test)]
 mod tests {
     use super::Greeting;
-    use crate::rest::hello_api::{hello, Name};
+    use crate::api::rest::hello_api::{hello, Name};
     use axum::extract::Query;
 
     #[sqlx::test]
