@@ -14,6 +14,8 @@ use sqlx::Postgres;
 use std::marker::PhantomData;
 use tracing::instrument;
 
+const ADMIN_ROLE: &str = "admin";
+
 /// Any user role.
 #[derive(Clone, Copy, Debug)]
 pub struct Any;
@@ -39,6 +41,31 @@ impl<Role> User<Role> {
     /// The role of the user.
     pub fn role(&self) -> &str {
         self.role.as_ref()
+    }
+
+    /// Try to upgrade the user to the administrator type.
+    /// This will only work if the user has the admin role.
+    pub fn try_into_admin(self) -> Result<User<Admin>, ClientError> {
+        if self.role() == ADMIN_ROLE {
+            Ok(User {
+                id: self.id,
+                role: self.role,
+                role_type: PhantomData,
+            })
+        } else {
+            Err(ClientError::Forbidden)
+        }
+    }
+}
+
+impl User<Admin> {
+    /// "Downgrade" an administrator.
+    pub fn into_any(self) -> User {
+        User {
+            id: self.id,
+            role: self.role,
+            role_type: PhantomData,
+        }
     }
 }
 
@@ -91,15 +118,8 @@ where
         req: &mut axum::extract::RequestParts<B>,
     ) -> Result<Self, Self::Rejection> {
         let user = req.extract::<User>().await?;
-        if user.role() == "admin" {
-            Ok(User {
-                id: user.id,
-                role: user.role,
-                role_type: PhantomData,
-            })
-        } else {
-            Err(ClientError::Forbidden)?
-        }
+        let admin = user.try_into_admin()?;
+        Ok(admin)
     }
 }
 
@@ -140,10 +160,13 @@ pub async fn authenticate(conn: &mut Tx, username: &str, password: &str) -> ApiR
 
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
+
     use super::authenticate;
     use crate::infra::{
         database::DbPool,
         error::{ApiError, ClientError},
+        security::{Admin, User},
     };
 
     #[sqlx::test]
@@ -170,5 +193,35 @@ mod tests {
             result,
             Err(ApiError::ClientError(ClientError::Unauthorized))
         ))
+    }
+
+    fn user() -> User {
+        User {
+            id: 0,
+            role: "admin".into(),
+            role_type: PhantomData,
+        }
+    }
+
+    fn admin() -> User<Admin> {
+        user().try_into_admin().unwrap()
+    }
+
+    #[test]
+    fn user_can_call_user_fn() {
+        fn f(_: User) {}
+        f(user());
+    }
+
+    #[test]
+    fn admin_can_call_user_fn() {
+        fn f<R>(_: User<R>) {}
+        f(admin());
+    }
+
+    #[test]
+    fn admin_can_call_user_fn_2() {
+        fn user(_: User) {}
+        user(admin().into_any());
     }
 }
