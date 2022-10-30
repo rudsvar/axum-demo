@@ -27,7 +27,7 @@ pub fn init_logging() -> LogGuard {
         .with_filter(EnvFilter::new(&log_level));
 
     let app_name = env!("CARGO_PKG_NAME");
-    let opentelemetry_tracer = opentelemetry_jaeger::new_pipeline()
+    let opentelemetry_tracer = opentelemetry_jaeger::new_agent_pipeline()
         .with_service_name(app_name)
         .install_simple()
         .unwrap();
