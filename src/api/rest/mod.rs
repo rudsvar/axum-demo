@@ -1,6 +1,6 @@
 //! REST API implementations.
 
-use crate::{repository::item_repository, shutdown};
+use crate::{infra::error::ApiError, repository::item_repository, shutdown};
 use axum::{
     body::Bytes,
     middleware::{self, Next},
@@ -12,7 +12,8 @@ use hyper::{
     Body, Request, Response, StatusCode,
 };
 use sqlx::PgPool;
-use std::{iter::once, net::TcpListener};
+use std::{iter::once, net::TcpListener, time::Duration};
+use tower::ServiceBuilder;
 use tower_http::{
     propagate_header::PropagateHeaderLayer,
     request_id::{MakeRequestUuid, SetRequestIdLayer},
@@ -82,7 +83,6 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
                 .merge(user_api::user_routes()),
         )
         // Layers
-        .layer(axum_sqlx_tx::Layer::new(db))
         .layer(middleware::from_fn(print_request_response))
         .layer(PropagateHeaderLayer::new(request_id.clone()))
         .layer(
@@ -92,12 +92,20 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
         )
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
+        .layer(axum_sqlx_tx::Layer::new_with_error::<ApiError>(db))
         .into_make_service();
 
-    // Start server
+    // Create tower service
+    let service = ServiceBuilder::new()
+        .rate_limit(2000, Duration::from_secs(1))
+        .timeout(Duration::from_secs(10))
+        .service(app);
+
     tracing::info!("Starting axum on {:?}", addr.local_addr());
-    let axum_server = axum::Server::from_tcp(addr)?
-        .serve(app)
+
+    // Start hyper server
+    let axum_server = hyper::Server::from_tcp(addr)?
+        .serve(service)
         .with_graceful_shutdown(shutdown("axum"));
     axum_server.await
 }

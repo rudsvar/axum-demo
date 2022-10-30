@@ -3,7 +3,7 @@
 //! If your function interacts with the database or validates user input,
 //! you likely want to return a [`ApiResult`].
 
-use axum::{response::IntoResponse, Json};
+use axum::{http::HeaderValue, response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -142,10 +142,16 @@ pub enum InternalError {
 
 impl IntoResponse for InternalError {
     fn into_response(self) -> axum::response::Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorBody::new("internal error".to_string())),
-        )
-            .into_response()
+        let status = match self {
+            Self::SqlxError(_) => StatusCode::SERVICE_UNAVAILABLE,
+            Self::AxumSqlxTxError(_) => StatusCode::SERVICE_UNAVAILABLE,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        let mut response =
+            (status, Json(ErrorBody::new("internal error".to_string()))).into_response();
+        response
+            .headers_mut()
+            .insert("Retry-After", HeaderValue::from_static("5"));
+        response
     }
 }
