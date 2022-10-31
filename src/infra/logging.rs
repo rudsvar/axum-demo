@@ -11,7 +11,8 @@ pub struct LogGuard {
 
 /// Initializes logging.
 pub fn init_logging() -> LogGuard {
-    let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info,axum_web_demo=debug".into());
+    let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info,axum_demo=debug".into());
+    let log_level_file = "info,axum_demo=trace";
 
     let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
     let stdout = tracing_subscriber::fmt::layer()
@@ -24,7 +25,7 @@ pub fn init_logging() -> LogGuard {
         .with_ansi(false)
         .with_writer(non_blocking_file_appender)
         .json()
-        .with_filter(EnvFilter::new(&log_level));
+        .with_filter(EnvFilter::new(&log_level_file));
 
     let app_name = env!("CARGO_PKG_NAME");
     let opentelemetry_tracer = opentelemetry_jaeger::new_agent_pipeline()
