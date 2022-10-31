@@ -22,7 +22,8 @@ impl<FailureClass> OnFailure<FailureClass> for NoopOnFailure {
     }
 }
 
-///
+/// Generates or propagates a request id, and
+/// creates a span that includes it and some request information.
 pub(crate) async fn request_id_span<B>(
     req: http::Request<B>,
     next: Next<B>,
