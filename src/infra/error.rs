@@ -138,6 +138,9 @@ pub enum InternalError {
     /// Bcrypt failed to perform some operation.
     #[error("bcrypt error: {0}")]
     BcryptError(#[from] bcrypt::BcryptError),
+    /// Other miscellaneous errors.
+    #[error("{0}")]
+    Other(String),
 }
 
 impl IntoResponse for InternalError {
