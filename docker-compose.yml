@@ -5,7 +5,7 @@ services:
     build: .
     ports:
       - 0.0.0.0:8080:8080
-  db:
+  postgres:
     image: postgres:14
     ports:
       - 5432:5432
