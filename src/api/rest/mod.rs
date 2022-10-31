@@ -1,22 +1,17 @@
 //! REST API implementations.
 
-use crate::{infra::error::ApiError, repository::item_repository, shutdown};
-use axum::{
-    body::Bytes,
-    middleware::{self, Next},
-    response::IntoResponse,
-    Router,
+use crate::{
+    api::rest::middleware::{print_request_response, request_id_span, NoopOnFailure},
+    infra::error::ApiError,
+    repository::item_repository,
+    shutdown,
 };
-use hyper::{
-    header::{HeaderName, AUTHORIZATION},
-    Body, Request, Response, StatusCode,
-};
+use axum::Router;
+use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
 use tower::ServiceBuilder;
 use tower_http::{
-    propagate_header::PropagateHeaderLayer,
-    request_id::{MakeRequestUuid, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
@@ -29,9 +24,8 @@ use utoipa_swagger_ui::SwaggerUi;
 
 pub mod hello_api;
 pub mod item_api;
+pub mod middleware;
 pub mod user_api;
-
-static X_REQUEST_ID: &str = "x-request-id";
 
 // OpenApi configuration.
 #[derive(OpenApi)]
@@ -70,7 +64,6 @@ impl Modify for SecurityAddon {
 
 /// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
-    let request_id = HeaderName::from_static(X_REQUEST_ID);
     let app = Router::new()
         // Swagger ui
         .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
@@ -83,16 +76,16 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
                 .merge(user_api::user_routes()),
         )
         // Layers
-        .layer(middleware::from_fn(print_request_response))
-        .layer(PropagateHeaderLayer::new(request_id.clone()))
+        .layer(axum_sqlx_tx::Layer::new_with_error::<ApiError>(db))
+        .layer(axum::middleware::from_fn(print_request_response))
         .layer(
             TraceLayer::new_for_http()
                 .on_request(DefaultOnRequest::new().level(Level::INFO))
-                .on_response(DefaultOnResponse::new().level(Level::INFO)),
+                .on_response(DefaultOnResponse::new().level(Level::INFO))
+                .on_failure(NoopOnFailure),
         )
-        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+        .layer(axum::middleware::from_fn(request_id_span))
         .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
-        .layer(axum_sqlx_tx::Layer::new_with_error::<ApiError>(db))
         .into_make_service();
 
     // Create tower service
@@ -108,45 +101,6 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
         .serve(service)
         .with_graceful_shutdown(shutdown("axum"));
     axum_server.await
-}
-
-async fn print_request_response(
-    req: hyper::Request<Body>,
-    next: Next<Body>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let (parts, body) = req.into_parts();
-    let bytes = buffer_and_print("Request", body).await?;
-    let req = Request::from_parts(parts, Body::from(bytes));
-
-    let res = next.run(req).await;
-
-    let (parts, body) = res.into_parts();
-    let bytes = buffer_and_print("Response", body).await?;
-    let res = Response::from_parts(parts, Body::from(bytes));
-
-    Ok(res)
-}
-
-async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, (StatusCode, String)>
-where
-    B: axum::body::HttpBody,
-    B::Error: std::fmt::Display,
-{
-    let bytes = match hyper::body::to_bytes(body).await {
-        Ok(bytes) => bytes,
-        Err(err) => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                format!("failed to read {} body: {}", direction, err),
-            ));
-        }
-    };
-
-    if let Ok(body) = std::str::from_utf8(&bytes) {
-        tracing::trace!("{} body = {:?}", direction, body);
-    }
-
-    Ok(bytes)
 }
 
 #[cfg(test)]

@@ -162,6 +162,7 @@ dependencies = [
  "bcrypt",
  "chrono",
  "config",
+ "http",
  "hyper",
  "opentelemetry",
  "opentelemetry-jaeger",

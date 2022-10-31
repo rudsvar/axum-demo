@@ -21,6 +21,7 @@ tower-http = { version = "0.3.4", features = [
     "set-header",
     "compression-gzip",
 ] }
+http = "0.2.8"
 hyper = "0.14.20"
 tokio = { version = "1.20.1", features = [
     "macros",
@@ -35,7 +36,6 @@ utoipa-swagger-ui = { version = "2.0.1", features = ["axum"] }
 # gRPC
 tonic = "0.8.1"
 prost = "0.11"
-anyhow = "1.0.65"
 
 # Database
 sqlx = { version = "0.6.2", default_features = false, features = [
@@ -67,6 +67,7 @@ config = "0.13.2"
 uuid = { version = "1.2.0", features = ["v4"] }
 bcrypt = "0.13.0"
 thiserror = "1.0.37"
+anyhow = "1.0.65"
 chrono = { version = "0.4.22", features = ["serde"] }
 
 [build-dependencies]

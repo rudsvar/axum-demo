@@ -1,20 +1,21 @@
 //! For interacting with the database.
 
-use super::config::DatabaseConfig;
+use super::{config::DatabaseConfig, error::ApiError};
 use sqlx::{
     pool::PoolOptions,
     postgres::{PgConnectOptions, PgSslMode},
-    ConnectOptions, PgConnection, PgPool, Postgres, Transaction,
+    ConnectOptions, PgPool, Postgres,
 };
 use std::time::Duration;
 use tracing::log::LevelFilter;
 
+/// A transaction type that implements [`axum::extract::FromRequest`].
+/// Will automatically commit on save, and abort on failure.
+pub type NewTx = axum_sqlx_tx::Tx<Postgres, ApiError>;
+
 /// A common transaction type.
 /// Use this for the business and persistence layer.
-pub type Tx = Transaction<'static, Postgres>;
-
-/// A common database connection type.
-pub type DbConnection = PgConnection;
+pub type Tx = sqlx::Transaction<'static, Postgres>;
 
 /// A common database pool type.
 pub type DbPool = PgPool;
