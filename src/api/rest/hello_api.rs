@@ -3,6 +3,7 @@
 use crate::service;
 use axum::{extract::Query, routing::get, Json, Router};
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 use tracing::instrument;
 use utoipa::{IntoParams, ToSchema};
 
@@ -12,9 +13,15 @@ pub fn hello_routes() -> Router {
 }
 
 /// A name query parameter.
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Deserialize, IntoParams)]
 pub struct Name {
     name: Option<String>,
+}
+
+impl Debug for Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name.fmt(f)
+    }
 }
 
 /// This is a response to the hello endpoint.
