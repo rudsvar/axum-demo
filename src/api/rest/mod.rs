@@ -1,7 +1,7 @@
 //! REST API implementations.
 
 use crate::{
-    api::rest::middleware::{print_request_response, request_id_span, NoopOnFailure},
+    api::rest::middleware::{print_request_response, MakeRequestIdSpan},
     infra::error::ApiError,
     repository::item_repository,
     shutdown,
@@ -12,6 +12,7 @@ use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
 use tower::ServiceBuilder;
 use tower_http::{
+    request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
@@ -64,6 +65,7 @@ impl Modify for SecurityAddon {
 
 /// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
+    // let request_id = HeaderName::
     let app = Router::new()
         // Swagger ui
         .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
@@ -78,13 +80,15 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
         // Layers
         .layer(axum_sqlx_tx::Layer::new_with_error::<ApiError>(db))
         .layer(axum::middleware::from_fn(print_request_response))
+        .layer(PropagateRequestIdLayer::x_request_id())
         .layer(
             TraceLayer::new_for_http()
+                .make_span_with(MakeRequestIdSpan)
                 .on_request(DefaultOnRequest::new().level(Level::INFO))
                 .on_response(DefaultOnResponse::new().level(Level::INFO))
-                .on_failure(NoopOnFailure),
+                .on_failure(()),
         )
-        .layer(axum::middleware::from_fn(request_id_span))
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
         .into_make_service();
 
