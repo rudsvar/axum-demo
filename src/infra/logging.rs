@@ -25,7 +25,7 @@ pub fn init_logging() -> LogGuard {
         .with_ansi(false)
         .with_writer(non_blocking_file_appender)
         .json()
-        .with_filter(EnvFilter::new(&log_level_file));
+        .with_filter(EnvFilter::new(log_level_file));
 
     let app_name = env!("CARGO_PKG_NAME");
     let opentelemetry_tracer = opentelemetry_jaeger::new_agent_pipeline()

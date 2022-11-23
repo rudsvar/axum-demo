@@ -6,7 +6,7 @@ use crate::{
     repository::item_repository,
     shutdown,
 };
-use axum::Router;
+use axum::{response::Html, Router};
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
@@ -63,10 +63,21 @@ impl Modify for SecurityAddon {
     }
 }
 
+async fn index() -> Html<&'static str> {
+    axum::response::Html(
+        r#"
+            <h1>Axum demo</h1>
+            <ul>
+                <li> <a href="/swagger-ui/">Swagger UI</a> </li>
+            </ul>
+        "#,
+    )
+}
+
 /// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
-    // let request_id = HeaderName::
     let app = Router::new()
+        .route("/", axum::routing::get(index))
         // Swagger ui
         .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
         // API

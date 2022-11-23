@@ -17,7 +17,7 @@ pub fn user_routes() -> Router {
 /// Authenticates a user.
 #[utoipa::path(
     get,
-    path = "/user",
+    path = "/api/user",
     responses(
         (status = 200, description = "Ok", body = i32),
         (status = 401, description = "Unauthorized", body = ErrorBody),
@@ -36,7 +36,7 @@ pub async fn user(user: User) -> ApiResult<Json<i32>> {
 /// Authenticates an admin user.
 #[utoipa::path(
     get,
-    path = "/admin",
+    path = "/api/admin",
     responses(
         (status = 200, description = "Ok", body = i32),
         (status = 401, description = "Unauthorized", body = ErrorBody),

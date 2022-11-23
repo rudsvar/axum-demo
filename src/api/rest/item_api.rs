@@ -21,7 +21,7 @@ pub fn item_routes() -> Router {
 /// Creates a new item.
 #[utoipa::path(
     post,
-    path = "/items",
+    path = "/api/items",
     request_body = NewItem,
     responses(
         (status = 201, description = "Ok", body = Item),
@@ -38,7 +38,7 @@ async fn create_item(mut tx: NewTx, Json(new_item): Json<NewItem>) -> ApiResult<
 /// Lists all items.
 #[utoipa::path(
     get,
-    path = "/items",
+    path = "/api/items",
     responses(
         (status = 200, description = "Success", body = [Item]),
         (status = 500, description = "Internal error", body = ErrorBody),
