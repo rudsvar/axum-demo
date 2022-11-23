@@ -10,6 +10,7 @@ use axum::{
     headers::{authorization::Basic, Authorization},
     TypedHeader,
 };
+use cached::proc_macro::cached;
 use sqlx::Postgres;
 use std::marker::PhantomData;
 use tracing::instrument;
@@ -26,6 +27,7 @@ pub struct Admin;
 
 /// An authenticated user.
 /// This can only be constructed from a request.
+#[derive(Clone)]
 pub struct User<Role = Any> {
     id: i32,
     role: String,
@@ -130,6 +132,15 @@ struct UserRow {
 }
 
 /// Validate a user's password.
+#[cached(
+    size = 100,
+    time = 30,
+    time_refresh,
+    sync_writes = true,
+    key = "String",
+    convert = r##"{ format!("{}:{}", username, password) }"##,
+    result = true
+)]
 #[instrument(skip(conn, password))]
 pub async fn authenticate(conn: &mut Tx, username: &str, password: &str) -> ApiResult<User> {
     tracing::info!("Fetching {}'s password", username);
