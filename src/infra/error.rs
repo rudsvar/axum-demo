@@ -106,6 +106,9 @@ pub enum ClientError {
     /// The resource already exists.
     #[error("conflict")]
     Conflict,
+    /// Integration error.
+    #[error("integration with external system failed")]
+    IntegrationError,
 }
 
 impl IntoResponse for ClientError {
@@ -117,6 +120,7 @@ impl IntoResponse for ClientError {
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict => StatusCode::CONFLICT,
+            Self::IntegrationError => StatusCode::SERVICE_UNAVAILABLE,
         };
         (status, Json(ErrorBody::new(msg))).into_response()
     }
@@ -138,6 +142,9 @@ pub enum InternalError {
     /// Bcrypt failed to perform some operation.
     #[error("bcrypt error: {0}")]
     BcryptError(#[from] bcrypt::BcryptError),
+    /// Reqwest-call failed.
+    #[error("reqwest error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
     /// Other miscellaneous errors.
     #[error("{0}")]
     Other(String),
