@@ -17,24 +17,66 @@ use tracing::instrument;
 
 const ADMIN_ROLE: &str = "admin";
 
+/// A trait to implement to create new roles.
+///
+/// # Examples
+///
+/// ```
+/// /// A custom role.
+/// struct CustomRole;
+///
+/// impl Role for CustomRole {
+///     fn is_satisfied(role: &[&str]) -> bool {
+///         role.contains(&"foo") && role.contains(&"bar") || role.contains(&"baz")
+///     }
+/// }
+///
+/// /// A handler that guarantees that
+/// /// 1. the user has been authenticated, and that
+/// /// 2. the user has the [`CustomRole`] role.
+/// pub async fn custom(user: User<CustomRole>) -> ApiResult<Json<i32>> {
+///     tracing::info!("Custom user logged in");
+///     Ok(Json(user.id()))
+/// }
+/// ```
+pub trait Role
+where
+    Self: Sized,
+{
+    /// Checks if the role is satisfied.
+    fn is_satisfied(roles: &[&str]) -> bool;
+}
+
 /// Any user role.
 #[derive(Clone, Copy, Debug)]
 pub struct Any;
+
+impl Role for Any {
+    fn is_satisfied(_: &[&str]) -> bool {
+        true
+    }
+}
 
 /// The admin role.
 #[derive(Clone, Copy, Debug)]
 pub struct Admin;
 
+impl Role for Admin {
+    fn is_satisfied(role: &[&str]) -> bool {
+        role.contains(&ADMIN_ROLE)
+    }
+}
+
 /// An authenticated user.
 /// This can only be constructed from a request.
 #[derive(Clone)]
-pub struct User<Role = Any> {
+pub struct User<R = Any> {
     id: i32,
     role: String,
-    role_type: PhantomData<Role>,
+    role_type: PhantomData<R>,
 }
 
-impl<Role> User<Role> {
+impl<R> User<R> {
     /// The id of the user.
     pub fn id(&self) -> i32 {
         self.id
@@ -45,17 +87,19 @@ impl<Role> User<Role> {
         self.role.as_ref()
     }
 
-    /// Try to upgrade the user to the administrator type.
-    /// This will only work if the user has the admin role.
-    pub fn try_into_admin(self) -> Result<User<Admin>, ClientError> {
-        if self.role() == ADMIN_ROLE {
+    /// Upgrade (or downgrade) a user's roles.
+    pub fn try_upgrade<NewRole>(self) -> ApiResult<User<NewRole>>
+    where
+        NewRole: Role,
+    {
+        if NewRole::is_satisfied(&[&self.role]) {
             Ok(User {
                 id: self.id,
                 role: self.role,
                 role_type: PhantomData,
             })
         } else {
-            Err(ClientError::Forbidden)
+            Err(ApiError::ClientError(ClientError::Forbidden))
         }
     }
 }
@@ -71,7 +115,7 @@ impl User<Admin> {
     }
 }
 
-impl<Role> std::fmt::Debug for User<Role> {
+impl<R> std::fmt::Debug for User<R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("User")
             .field("id", &self.id)
@@ -81,9 +125,10 @@ impl<Role> std::fmt::Debug for User<Role> {
 }
 
 #[async_trait]
-impl<B> FromRequest<B> for User
+impl<B, R> FromRequest<B> for User<R>
 where
     B: Send,
+    R: Role,
 {
     type Rejection = ApiError;
 
@@ -105,23 +150,10 @@ where
         // Authenticate user
         let user = authenticate(&mut tx, auth.username(), auth.password()).await?;
 
+        // Make sure they have the correct roles
+        let user = user.try_upgrade()?;
+
         Ok(user)
-    }
-}
-
-#[async_trait]
-impl<B> FromRequest<B> for User<Admin>
-where
-    B: Send,
-{
-    type Rejection = ApiError;
-
-    async fn from_request(
-        req: &mut axum::extract::RequestParts<B>,
-    ) -> Result<Self, Self::Rejection> {
-        let user = req.extract::<User>().await?;
-        let admin = user.try_into_admin()?;
-        Ok(admin)
     }
 }
 
@@ -215,7 +247,7 @@ mod tests {
     }
 
     fn admin() -> User<Admin> {
-        user().try_into_admin().unwrap()
+        user().try_upgrade().unwrap()
     }
 
     #[test]
