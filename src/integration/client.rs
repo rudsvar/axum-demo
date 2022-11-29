@@ -3,11 +3,8 @@
 //! Examples include [`LogClient`] and [`log_client`] for creating
 //! HTTP clients that automatically log requests.
 
-use bytes::Bytes;
-use http::{HeaderMap, StatusCode};
 use reqwest::{Client, Request};
-use serde::Deserialize;
-use std::{future::Future, pin::Pin, string::FromUtf8Error};
+use std::{future::Future, pin::Pin};
 use tower::{Service, ServiceBuilder};
 
 use crate::infra::error::{ApiError, ClientError, InternalError};
@@ -23,44 +20,8 @@ impl LogClient {
     }
 }
 
-/// A HTTP response.
-#[derive(Debug)]
-pub struct MyResponse {
-    status: StatusCode,
-    headers: HeaderMap,
-    bytes: Bytes,
-}
-
-impl MyResponse {
-    /// The HTTP status of the response.
-    pub fn status(&self) -> StatusCode {
-        self.status
-    }
-
-    /// The headers of the response.
-    pub fn headers(&self) -> &HeaderMap {
-        &self.headers
-    }
-
-    /// The bytes of the response.
-    pub fn bytes(&self) -> &Bytes {
-        &self.bytes
-    }
-
-    /// The UTF-8 text of the response.
-    /// Fails if the response is not valid UTF-8.
-    pub fn text(&self) -> Result<String, FromUtf8Error> {
-        String::from_utf8(self.bytes.to_vec())
-    }
-
-    /// Tries to parse the response as some deserializable type.
-    pub fn json<'a, T: Deserialize<'a>>(&'a self) -> Result<T, serde_json::Error> {
-        serde_json::from_slice(&self.bytes)
-    }
-}
-
-impl Service<Request> for LogClient {
-    type Response = MyResponse;
+impl Service<reqwest::Request> for LogClient {
+    type Response = reqwest::Response;
     type Error = ApiError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
@@ -75,23 +36,30 @@ impl Service<Request> for LogClient {
     fn call(&mut self, req: Request) -> Self::Future {
         let mut client = self.0.clone();
         Box::pin(async move {
-            // Send request
             tracing::info!("Sending request: {} {}", req.method(), req.url());
+            tracing::info!("Body: {:?}", req.body());
+            // Perform call
             let res = client
                 .call(req)
                 .await
                 .map_err(InternalError::ReqwestError)?;
+            // Get response data
             let status = res.status();
             let headers = res.headers().clone();
             let bytes = res.bytes().await.map_err(InternalError::ReqwestError)?;
-            // Check response
-            if !status.is_success() {
+            // Check if ok
+            if status.is_success() {
+                // Convert to http response
+                let mut res = http::Response::builder()
+                    .status(status)
+                    .body(bytes)
+                    .unwrap();
+                *res.headers_mut() = headers;
+
                 tracing::info!("Received response: {}", status);
-                Ok(MyResponse {
-                    status,
-                    headers,
-                    bytes,
-                })
+                tracing::info!("Body: {:?}", res.body());
+
+                Ok(reqwest::Response::from(res))
             } else {
                 tracing::error!("Received response: {}", status);
                 Err(ApiError::ClientError(ClientError::IntegrationError))
@@ -132,11 +100,13 @@ mod tests {
             Method::GET,
             Url::parse("https://dummyjson.com/products/1").unwrap(),
         );
-        // Get response
+
+        // Act
         let res = client.call(req).await.unwrap();
-        let product: Product = res.json().unwrap();
-        // Assertions
+
+        // Assert
         assert_eq!(res.status(), StatusCode::OK);
+        let product: Product = res.json().await.unwrap();
         assert_eq!(
             product,
             Product {
