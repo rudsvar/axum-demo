@@ -7,16 +7,22 @@ use reqwest::{Client, Request, Response};
 use std::{future::Future, pin::Pin, time::Duration};
 use tower::{Service, ServiceBuilder};
 
-use crate::infra::error::{ApiError, ClientError, InternalError};
+use crate::{
+    infra::{
+        database::DbPool,
+        error::{ApiError, ClientError, InternalError},
+    },
+    repository::request_repository::NewRequest,
+};
 
 /// A HTTP client wrapper for pre- and post-processing requests.
 #[derive(Debug)]
-pub struct LogClient(Client);
+pub struct LogClient(Client, DbPool);
 
 impl LogClient {
     /// Wraps a client.
-    pub fn new(client: Client) -> Self {
-        Self(client)
+    pub fn new(client: Client, db: DbPool) -> Self {
+        Self(client, db)
     }
 }
 
@@ -35,10 +41,14 @@ impl Service<Request> for LogClient {
 
     fn call(&mut self, req: Request) -> Self::Future {
         let mut client = self.0.clone();
+        let db = self.1.clone();
         Box::pin(async move {
             tracing::info!("Sending request: {} {}", req.method(), req.url());
+            let uri = req.url().path().to_string() + "?" + req.url().path();
+            let mut request_body = None;
             if let Some(body) = req.body() {
                 tracing::info!("Request body:\n{:?}", body);
+                request_body = Some(String::from_utf8(body.as_bytes().unwrap().to_vec()).unwrap());
             }
             // Perform call
             let res = client
@@ -48,7 +58,20 @@ impl Service<Request> for LogClient {
             // Get response data
             let status = res.status();
             let headers = res.headers().clone();
+            let server = res.remote_addr().unwrap().to_string();
             let bytes = res.bytes().await.map_err(InternalError::ReqwestError)?;
+            // Log it
+            let mut tx = db.begin().await?;
+            let new_req = NewRequest {
+                client: "TODO".to_string(),
+                server,
+                uri,
+                request_body,
+                response_body: Some(String::from_utf8(bytes.to_vec()).unwrap()),
+                status: status.as_u16() as i32,
+            };
+            let _ = crate::repository::request_repository::create_request(&mut tx, new_req).await;
+            tx.commit().await?;
             // Check if ok
             if status.is_success() {
                 // Convert to http response
@@ -73,11 +96,11 @@ impl Service<Request> for LogClient {
 }
 
 /// A preconfigured HTTP client.
-pub fn log_client() -> impl Service<Request, Response = Response, Error = ApiError> {
+pub fn log_client(db: DbPool) -> impl Service<Request, Response = Response, Error = ApiError> {
     let client = reqwest::Client::new();
     ServiceBuilder::new()
         .rate_limit(1, Duration::from_secs(1))
-        .layer_fn(LogClient::new)
+        .layer_fn(|c| LogClient::new(c, db.clone()))
         .service(client)
 }
 
@@ -86,6 +109,7 @@ mod tests {
     use super::log_client;
     use http::StatusCode;
     use serde::Deserialize;
+    use sqlx::PgPool;
     use tower::Service;
 
     #[derive(Debug, PartialEq, Deserialize)]
@@ -94,11 +118,11 @@ mod tests {
         title: String,
     }
 
-    #[tokio::test]
+    #[sqlx::test]
     #[ignore = "Does an integration call"]
-    async fn log_client_logs() {
+    async fn log_client_logs(db: PgPool) {
         tracing_subscriber::fmt().init();
-        let mut client = log_client();
+        let mut client = log_client(db);
 
         let req = reqwest::Client::new()
             .get("https://dummyjson.com/products/1")
@@ -117,6 +141,6 @@ mod tests {
                 id: 1,
                 title: "iPhone 9".to_string()
             }
-        )
+        );
     }
 }
