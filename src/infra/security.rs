@@ -1,4 +1,37 @@
 //! Types and utility functions relating to security.
+//!
+//! If your API requires information about the calling user,
+//! you can add a [`User<Role>`] to your parameter list.
+//! An instance of this class can only be created from a request with appropriate
+//! login information through the [`axum::extract::FromRequest`] trait.
+//!
+//! You can also add a type parameter representing the role of the user
+//! to limit access to your method. The authentication and authorization
+//! requirements are thus verified at compile time.
+//!
+//! # Examples
+//!
+//! ```
+//! # use axum::Json;
+//! # use axum_demo::infra::security::{User, Role};
+//! # use axum_demo::infra::error::ApiResult;
+//! /// A custom role.
+//! struct CustomRole;
+//!
+//! impl Role for CustomRole {
+//!     fn is_satisfied(role: &[&str]) -> bool {
+//!         role.contains(&"foo") && role.contains(&"bar") || role.contains(&"baz")
+//!     }
+//! }
+//!
+//! /// A handler that guarantees that
+//! /// 1. the user has been authenticated, and that
+//! /// 2. the user has the [`CustomRole`] role.
+//! pub async fn custom(user: User<CustomRole>) -> ApiResult<Json<i32>> {
+//!     tracing::info!("Custom user logged in");
+//!     Ok(Json(user.id()))
+//! }
+//! ```
 
 use super::{
     database::Tx,
@@ -22,6 +55,8 @@ const ADMIN_ROLE: &str = "admin";
 /// # Examples
 ///
 /// ```
+/// # use axum::Json;
+/// # use axum_demo::infra::security::{User, Role};
 /// /// A custom role.
 /// struct CustomRole;
 ///
@@ -29,14 +64,6 @@ const ADMIN_ROLE: &str = "admin";
 ///     fn is_satisfied(role: &[&str]) -> bool {
 ///         role.contains(&"foo") && role.contains(&"bar") || role.contains(&"baz")
 ///     }
-/// }
-///
-/// /// A handler that guarantees that
-/// /// 1. the user has been authenticated, and that
-/// /// 2. the user has the [`CustomRole`] role.
-/// pub async fn custom(user: User<CustomRole>) -> ApiResult<Json<i32>> {
-///     tracing::info!("Custom user logged in");
-///     Ok(Json(user.id()))
 /// }
 /// ```
 pub trait Role
@@ -47,17 +74,21 @@ where
     fn is_satisfied(roles: &[&str]) -> bool;
 }
 
-/// Any user role.
+/// Represents a user with unknown roles.
+///
+/// Using this in the parameter list means that we impose no restriction on the user's roles.
 #[derive(Clone, Copy, Debug)]
-pub struct Any;
+pub struct Unknown;
 
-impl Role for Any {
+impl Role for Unknown {
     fn is_satisfied(_: &[&str]) -> bool {
         true
     }
 }
 
-/// The admin role.
+/// Represents a user with the administrator role.
+///
+/// Using this in the parameter list means that only administrators can call the function.
 #[derive(Clone, Copy, Debug)]
 pub struct Admin;
 
@@ -67,10 +98,49 @@ impl Role for Admin {
     }
 }
 
-/// An authenticated user.
-/// This can only be constructed from a request.
+/// An authenticated user with role `R`, which defaults to [`Unknown`].
+///
+/// Having an instance of [`User<R>`] guarantees that the
+/// calling user's information is stored in its fields,
+/// and that the user has roles corresponding to `R`.
+/// See [`Unknown`] and [`Admin`] for examples.
+///
+/// # Examples
+///
+/// ```
+/// # use axum::Json;
+/// # use axum_demo::infra::security::{Role, User};
+/// # use axum_demo::infra::error::ApiResult;
+/// # /// A custom role.
+/// # struct CustomRole;
+/// # impl Role for CustomRole {
+/// #     fn is_satisfied(role: &[&str]) -> bool {
+/// #         role.contains(&"foo") && role.contains(&"bar") || role.contains(&"baz")
+/// #     }
+/// # }
+/// /// A handler that guarantees that
+/// /// 1. the user has been authenticated, and that
+/// /// 2. the user has the [`CustomRole`] role.
+/// pub async fn custom(user: User<CustomRole>) -> ApiResult<Json<i32>> {
+///     tracing::info!("Custom user logged in");
+///     Ok(Json(user.id()))
+/// }
+/// ```
+///
+/// You can also attempt to upgrade a user at runtime,
+/// which will verify that the user has the appropriate roles
+/// required for the new user type.
+///
+/// ```
+/// # use axum_demo::infra::security::{User, Admin};
+/// # use axum_demo::infra::error::{ApiError, ClientError};
+/// # use core::marker::PhantomData;
+/// pub fn try_upgrade(user: User) {
+///     let admin: Result<User<Admin>, ApiError> = user.try_upgrade();
+/// }
+/// ```
 #[derive(Clone)]
-pub struct User<R = Any> {
+pub struct User<R = Unknown> {
     id: i32,
     role: String,
     role_type: PhantomData<R>,
@@ -87,7 +157,7 @@ impl<R> User<R> {
         self.role.as_ref()
     }
 
-    /// Upgrade (or downgrade) a user's roles.
+    /// Attempt to upgrade (or downgrade) a user's roles.
     pub fn try_upgrade<NewRole>(self) -> ApiResult<User<NewRole>>
     where
         NewRole: Role,
