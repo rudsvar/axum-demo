@@ -3,3 +3,4 @@
 //! Contains types and functions for interacting with database tables.
 
 pub mod item_repository;
+pub mod request_repository;
