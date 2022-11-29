@@ -3,8 +3,8 @@
 //! Examples include [`LogClient`] and [`log_client`] for creating
 //! HTTP clients that automatically log requests.
 
-use reqwest::{Client, Request};
-use std::{future::Future, pin::Pin};
+use reqwest::{Client, Request, Response};
+use std::{future::Future, pin::Pin, time::Duration};
 use tower::{Service, ServiceBuilder};
 
 use crate::infra::error::{ApiError, ClientError, InternalError};
@@ -20,8 +20,8 @@ impl LogClient {
     }
 }
 
-impl Service<reqwest::Request> for LogClient {
-    type Response = reqwest::Response;
+impl Service<Request> for LogClient {
+    type Response = Response;
     type Error = ApiError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
@@ -37,7 +37,9 @@ impl Service<reqwest::Request> for LogClient {
         let mut client = self.0.clone();
         Box::pin(async move {
             tracing::info!("Sending request: {} {}", req.method(), req.url());
-            tracing::info!("Body: {:?}", req.body());
+            if let Some(body) = req.body() {
+                tracing::info!("Request body:\n{:?}", body);
+            }
             // Perform call
             let res = client
                 .call(req)
@@ -57,9 +59,11 @@ impl Service<reqwest::Request> for LogClient {
                 *res.headers_mut() = headers;
 
                 tracing::info!("Received response: {}", status);
-                tracing::info!("Body: {:?}", res.body());
+                if !res.body().is_empty() {
+                    tracing::info!("Body:\n{:?}", res.body());
+                }
 
-                Ok(reqwest::Response::from(res))
+                Ok(Response::from(res))
             } else {
                 tracing::error!("Received response: {}", status);
                 Err(ApiError::ClientError(ClientError::IntegrationError))
@@ -69,9 +73,10 @@ impl Service<reqwest::Request> for LogClient {
 }
 
 /// A preconfigured HTTP client.
-pub fn log_client() -> LogClient {
+pub fn log_client() -> impl Service<Request, Response = Response, Error = ApiError> {
     let client = reqwest::Client::new();
     ServiceBuilder::new()
+        .rate_limit(1, Duration::from_secs(1))
         .layer_fn(LogClient::new)
         .service(client)
 }
@@ -79,8 +84,7 @@ pub fn log_client() -> LogClient {
 #[cfg(test)]
 mod tests {
     use super::log_client;
-    use http::{Method, StatusCode};
-    use reqwest::{Request, Url};
+    use http::StatusCode;
     use serde::Deserialize;
     use tower::Service;
 
@@ -95,11 +99,11 @@ mod tests {
     async fn log_client_logs() {
         tracing_subscriber::fmt().init();
         let mut client = log_client();
-        // Create request
-        let req = Request::new(
-            Method::GET,
-            Url::parse("https://dummyjson.com/products/1").unwrap(),
-        );
+
+        let req = reqwest::Client::new()
+            .get("https://dummyjson.com/products/1")
+            .build()
+            .unwrap();
 
         // Act
         let res = client.call(req).await.unwrap();
