@@ -9,9 +9,9 @@ use tracing::instrument;
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NewRequest {
     /// The sender of the request.
-    pub client: String,
+    pub client: Option<String>,
     /// The receiver of the request.
-    pub server: String,
+    pub server: Option<String>,
     /// The request URI.
     pub uri: String,
     /// The request body.
@@ -28,9 +28,9 @@ pub struct Request {
     /// A unique id for this request.
     pub id: i32,
     /// The sender of the request.
-    pub client: String,
+    pub client: Option<String>,
     /// The receiver of the request.
-    pub server: String,
+    pub server: Option<String>,
     /// The request URI.
     pub uri: String,
     /// The request body.

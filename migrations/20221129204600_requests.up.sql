@@ -1,7 +1,7 @@
 CREATE TABLE requests (
     id SERIAL PRIMARY KEY,
-    client TEXT NOT NULL UNIQUE,
-    server TEXT NOT NULL,
+    client TEXT,
+    server TEXT,
     uri TEXT NOT NULL,
     request_body TEXT,
     response_body TEXT,

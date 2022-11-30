@@ -44,7 +44,7 @@ impl Service<Request> for LogClient {
         let db = self.1.clone();
         Box::pin(async move {
             tracing::info!("Sending request: {} {}", req.method(), req.url());
-            let uri = req.url().path().to_string() + "?" + req.url().path();
+            let uri = req.url().to_string();
             let mut request_body = None;
             if let Some(body) = req.body() {
                 tracing::info!("Request body:\n{:?}", body);
@@ -58,13 +58,13 @@ impl Service<Request> for LogClient {
             // Get response data
             let status = res.status();
             let headers = res.headers().clone();
-            let server = res.remote_addr().unwrap().to_string();
+            let server = res.remote_addr().expect("no remote addr?").to_string();
             let bytes = res.bytes().await.map_err(InternalError::ReqwestError)?;
             // Log it
             let mut tx = db.begin().await?;
             let new_req = NewRequest {
-                client: "TODO".to_string(),
-                server,
+                client: None,
+                server: Some(server),
                 uri,
                 request_body,
                 response_body: Some(String::from_utf8(bytes.to_vec()).unwrap()),
