@@ -79,8 +79,8 @@ mod tests {
         let req = create_request(
             &mut tx,
             NewRequest {
-                client: "127.0.0.1".to_string(),
-                server: "127.0.0.1".to_string(),
+                client: None,
+                server: None,
                 uri: "/foo/bar".to_string(),
                 request_body: None,
                 response_body: Some(r#"{"foo": "bar"}"#.to_string()),
