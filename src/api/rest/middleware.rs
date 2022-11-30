@@ -1,9 +1,16 @@
 //! Middleware for modifying requests and responses.
 
 use axum::{body::Bytes, middleware::Next, response::IntoResponse};
-use http::{Request, Response, StatusCode};
+use http::{Request, Response};
 use hyper::Body;
 use tower_http::trace::MakeSpan;
+use crate::{
+    infra::{
+        database::DbPool,
+        error::{ApiError, ClientError},
+    },
+    repository::request_repository::NewRequest,
+};
 
 static X_REQUEST_ID: &str = "x-request-id";
 
@@ -28,38 +35,56 @@ impl<B> MakeSpan<B> for MakeRequestIdSpan {
     }
 }
 
+/// Print and log the request and response.
 pub(crate) async fn print_request_response(
     req: hyper::Request<Body>,
     next: Next<Body>,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
+    db: DbPool,
+) -> Result<impl IntoResponse, ApiError> {
+    // Print request
     let (parts, body) = req.into_parts();
-    let bytes = buffer_and_print("Request", body).await?;
-    let req = Request::from_parts(parts, Body::from(bytes));
+    let req_bytes = buffer_and_print("Request", body).await?;
+    let req_bytes_clone = req_bytes.clone();
+    let req = Request::from_parts(parts, Body::from(req_bytes));
+    let uri = req.uri().to_string();
 
+    // Perform request
     let res = next.run(req).await;
 
+    // Print response
     let (parts, body) = res.into_parts();
-    let bytes = buffer_and_print("Response", body).await?;
-    let res = Response::from_parts(parts, Body::from(bytes));
+    let res_bytes = buffer_and_print("Response", body).await?;
+    let res_bytes_clone = res_bytes.clone();
+    let res = Response::from_parts(parts, Body::from(res_bytes));
+
+    // Log request
+    let mut tx = db.begin().await?;
+    let new_req = NewRequest {
+        client: None,
+        server: None,
+        uri,
+        request_body: String::from_utf8(req_bytes_clone.to_vec()).ok(),
+        response_body: String::from_utf8(res_bytes_clone.to_vec()).ok(),
+        status: res.status().as_u16() as i32,
+    };
+    let _ = crate::repository::request_repository::create_request(&mut tx, new_req).await?;
+    tx.commit().await?;
 
     Ok(res)
 }
 
-async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, (StatusCode, String)>
+/// Read the entire request body stream and store it in memory.
+async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, ApiError>
 where
     B: axum::body::HttpBody,
     B::Error: std::fmt::Display,
 {
-    let bytes = match hyper::body::to_bytes(body).await {
-        Ok(bytes) => bytes,
-        Err(err) => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                format!("failed to read {} body: {}", direction, err),
-            ));
-        }
-    };
+    // Try to read stream
+    let bytes = hyper::body::to_bytes(body)
+        .await
+        .map_err(|e| ApiError::ClientError(ClientError::BadRequest(e.to_string())))?;
 
+    // Log if valid text
     if let Ok(body) = std::str::from_utf8(&bytes) {
         tracing::trace!("{} body = {:?}", direction, body);
     }
