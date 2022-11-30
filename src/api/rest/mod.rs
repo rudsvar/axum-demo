@@ -10,7 +10,7 @@ use axum::{response::Html, Router};
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
-use tower::{ServiceBuilder};
+use tower::ServiceBuilder;
 use tower_http::{
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
@@ -90,7 +90,9 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
         )
         // Layers
         .layer(axum_sqlx_tx::Layer::new_with_error::<ApiError>(db.clone()))
-        .layer(axum::middleware::from_fn(move |req, next| print_request_response(req, next, db.clone())))
+        .layer(axum::middleware::from_fn(move |req, next| {
+            print_request_response(req, next, db.clone())
+        }))
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(
             TraceLayer::new_for_http()

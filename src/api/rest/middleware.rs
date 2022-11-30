@@ -1,9 +1,5 @@
 //! Middleware for modifying requests and responses.
 
-use axum::{body::Bytes, middleware::Next, response::IntoResponse};
-use http::{Request, Response};
-use hyper::Body;
-use tower_http::trace::MakeSpan;
 use crate::{
     infra::{
         database::DbPool,
@@ -11,6 +7,10 @@ use crate::{
     },
     repository::request_repository::NewRequest,
 };
+use axum::{body::Bytes, middleware::Next, response::IntoResponse};
+use http::{Request, Response};
+use hyper::Body;
+use tower_http::trace::MakeSpan;
 
 static X_REQUEST_ID: &str = "x-request-id";
 
