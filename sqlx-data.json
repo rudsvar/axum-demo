@@ -62,6 +62,73 @@
     },
     "query": "\n        SELECT * FROM items\n        "
   },
+  "73ffc4da31bb8de98fa79813fd7615d1c1f5d593fe5920d4e2113cafe5268db4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "client",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "server",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "uri",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "request_body",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "response_body",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "status",
+          "ordinal": 6,
+          "type_info": "Int4"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Text",
+          "Text",
+          "Text",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n        INSERT INTO requests (client, server, uri, request_body, response_body, status)\n        VALUES ($1, $2, $3, $4, $5, $6)\n        RETURNING *\n        "
+  },
   "865176b8fe008839001253735e992c065fa09841956a317696b9eb27d3c555e9": {
     "describe": {
       "columns": [
