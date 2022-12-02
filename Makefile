@@ -13,7 +13,7 @@ run-release:
 test:
 	cargo test
 
-run-release:
+test-release:
 	cargo test --release
 
 doc:
