@@ -25,3 +25,15 @@ doc-open:
 bench:
 	# https://crates.io/crates/cargo-criterion
 	cargo criterion
+
+sqlx-prepare:
+	cargo sqlx prepare -- --lib
+
+sqlx-verify:
+	cargo sqlx prepare -- --lib
+
+sqlx-migrate:
+	sqlx migrate run
+
+sqlx-reset:
+	sqlx database reset
