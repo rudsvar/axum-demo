@@ -8,6 +8,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  REGISTRY: "registry.digitalocean.com/rudsvar"
+  IMAGE_NAME: "axum-demo"
+  APP_ID: "74fe35d7-e848-4926-aebf-d51db819d404"
 
 jobs:
   test:
@@ -38,7 +41,7 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@v3
+      - uses: Swatinem/rust-cache@v2
 
       - name: Cache sqlx-cli
         uses: actions/cache@v3
@@ -110,27 +113,28 @@ jobs:
         with:
           commit_message: Bump version
 
-  publish:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    name: Deploy
     runs-on: ubuntu-latest
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    env:
-      SQLX_OFFLINE: true
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout the repo
+        uses: actions/checkout@v3
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Build container image
+        run: docker build . -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
-      - uses: Swatinem/rust-cache@v3
+      - name: Log in to DigitalOcean Container Registry with short-lived credentials
+        run: doctl registry login --expiry-seconds 600
 
-      - name: Run cargo publish
-        uses: actions-rs/cargo@v1
-        with:
-          command: publish
-          args: --dry-run
+      - name: Remove all old images
+        run: if [ ! -z "$(doctl registry repository list | grep "$(echo $IMAGE_NAME)")" ]; then doctl registry repository delete-manifest $(echo $IMAGE_NAME) $(doctl registry repository list-tags $(echo $IMAGE_NAME) | grep -o "sha.*") --force; else echo "No repository"; fi
+
+      - name: Push image to DigitalOcean Container Registry
+        run: docker push $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
