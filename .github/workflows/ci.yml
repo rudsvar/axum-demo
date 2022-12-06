@@ -74,7 +74,7 @@ jobs:
 
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Commit formatted files
+          commit_message: Run cargo fmt
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
