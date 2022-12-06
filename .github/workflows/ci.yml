@@ -70,7 +70,11 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check
+          args: --all
+
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Commit formatted files
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
