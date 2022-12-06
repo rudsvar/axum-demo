@@ -28,7 +28,7 @@ jobs:
       SQLX_VERSION: 0.6.2
       CARGO_BUMP_VERSION: 1.1.0
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
       - name: Install protoc for gRPC
         run: sudo apt-get install -y protobuf-compiler
@@ -41,10 +41,10 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v1
 
       - name: Cache sqlx-cli
-        uses: actions/cache@v3
+        uses: actions/cache@v2
         id: cache-sqlx
         with:
           path: |
@@ -65,7 +65,7 @@ jobs:
             --locked
 
       - name: Cache cargo-bump
-        uses: actions/cache@v3
+        uses: actions/cache@v2
         id: cache-cargo-bump
         with:
           path: |
@@ -120,7 +120,7 @@ jobs:
     needs: test
     steps:
       - name: Checkout the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Build container image
         run: docker build . -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
