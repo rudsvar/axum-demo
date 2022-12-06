@@ -44,7 +44,7 @@ pub struct DatabaseConfig {
 pub fn load_config() -> anyhow::Result<Config> {
     let settings = config::Config::builder()
         .add_source(config::File::with_name("config"))
-        .add_source(config::Environment::with_prefix("app").separator("_"))
+        .add_source(config::Environment::with_prefix("app").separator("__"))
         .build()?
         .try_deserialize()?;
     Ok(settings)
