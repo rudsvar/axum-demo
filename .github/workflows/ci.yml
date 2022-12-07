@@ -10,7 +10,6 @@ env:
   CARGO_TERM_COLOR: always
   REGISTRY: "registry.digitalocean.com/rudsvar"
   IMAGE_NAME: "axum-demo"
-  APP_ID: "74fe35d7-e848-4926-aebf-d51db819d404"
 
 jobs:
   test:
