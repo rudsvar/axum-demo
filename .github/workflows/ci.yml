@@ -88,29 +88,23 @@ jobs:
       - name: Verify that sqlx-data.json is up to date
         run: cargo sqlx prepare --check -- --lib
 
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all
 
-      - uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: Run cargo fmt
-
       - name: Run cargo bump
         uses: actions-rs/cargo@v1
         with:
           command: bump
 
-      - uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
         with:
-          commit_message: Bump version
+          command: test
+
+      - uses: stefanzweifel/git-auto-commit-action@v4
 
   deploy:
     if: github.ref == 'refs/heads/main'
