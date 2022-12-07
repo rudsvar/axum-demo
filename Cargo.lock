@@ -222,7 +222,7 @@ dependencies = [
 
 [[package]]
 name = "axum-demo"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "axum 0.5.17",
