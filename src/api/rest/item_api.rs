@@ -31,7 +31,10 @@ pub fn item_routes() -> Router {
     )
 )]
 #[instrument(skip(tx))]
-async fn create_item(mut tx: NewTx, Json(new_item): Json<NewItem>) -> ApiResult<(StatusCode, Json<Item>)> {
+async fn create_item(
+    mut tx: NewTx,
+    Json(new_item): Json<NewItem>,
+) -> ApiResult<(StatusCode, Json<Item>)> {
     let item = item_service::create_item(&mut tx, new_item).await?;
     Ok((StatusCode::CREATED, Json(item)))
 }
