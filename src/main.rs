@@ -4,13 +4,24 @@ use axum_demo::{
     api::{grpc, rest},
     infra::{self},
 };
-use std::net::TcpListener;
+use sqlx::migrate::Migrator;
+use std::{net::TcpListener, time::Duration};
+
+static MIGRATOR: Migrator = sqlx::migrate!();
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _guard = infra::logging::init_logging();
     let config = infra::config::load_config()?;
     let db = infra::database::init_db(&config.database);
+
+    // Run migrations
+    tracing::info!("Running migrations");
+    while let Err(e) = MIGRATOR.run(&db).await {
+        tracing::error!("Failed to run migrations: {}", e);
+        tokio::time::sleep(Duration::from_secs(30)).await;
+    }
+    tracing::info!("Completed migrations");
 
     // Start servers
     let listener = TcpListener::bind(&format!(
