@@ -9,6 +9,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use http::StatusCode;
 use tracing::instrument;
 
 /// The item API endpoints.
@@ -30,9 +31,9 @@ pub fn item_routes() -> Router {
     )
 )]
 #[instrument(skip(tx))]
-async fn create_item(mut tx: NewTx, Json(new_item): Json<NewItem>) -> ApiResult<Json<Item>> {
+async fn create_item(mut tx: NewTx, Json(new_item): Json<NewItem>) -> ApiResult<(StatusCode, Json<Item>)> {
     let item = item_service::create_item(&mut tx, new_item).await?;
-    Ok(Json(item))
+    Ok((StatusCode::CREATED, Json(item)))
 }
 
 /// Lists all items.
