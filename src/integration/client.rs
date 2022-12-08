@@ -44,11 +44,19 @@ impl Service<Request> for LogClient {
         let db = self.1.clone();
         Box::pin(async move {
             tracing::info!("Sending request: {} {}", req.method(), req.url());
+            let method = req.method().to_string();
             let uri = req.url().to_string();
+            let host = req
+                .url()
+                .host_str()
+                .map(|h| h.to_string())
+                .ok_or_else(|| InternalError::Other("missing host in client".to_string()))?;
             let mut request_body = None;
             if let Some(body) = req.body() {
                 tracing::info!("Request body:\n{:?}", body);
-                request_body = Some(String::from_utf8(body.as_bytes().unwrap().to_vec()).unwrap());
+                request_body = body
+                    .as_bytes()
+                    .and_then(|bytes| String::from_utf8(bytes.to_vec()).ok());
             }
             // Perform call
             let res = client
@@ -58,16 +66,15 @@ impl Service<Request> for LogClient {
             // Get response data
             let status = res.status();
             let headers = res.headers().clone();
-            let server = res.remote_addr().expect("no remote addr?").to_string();
             let bytes = res.bytes().await.map_err(InternalError::ReqwestError)?;
             // Log it
             let mut tx = db.begin().await?;
             let new_req = NewRequest {
-                client: None,
-                server: Some(server),
+                host,
+                method,
                 uri,
                 request_body,
-                response_body: Some(String::from_utf8(bytes.to_vec()).unwrap()),
+                response_body: String::from_utf8(bytes.to_vec()).ok(),
                 status: status.as_u16() as i32,
             };
             let _ = crate::repository::request_repository::create_request(&mut tx, new_req).await;
@@ -96,7 +103,7 @@ impl Service<Request> for LogClient {
 }
 
 /// A preconfigured HTTP client.
-pub fn log_client(db: DbPool) -> impl Service<Request, Response = Response, Error = ApiError> {
+pub fn logging_client(db: DbPool) -> impl Service<Request, Response = Response, Error = ApiError> {
     let client = reqwest::Client::new();
     ServiceBuilder::new()
         .rate_limit(1, Duration::from_secs(1))
@@ -106,7 +113,7 @@ pub fn log_client(db: DbPool) -> impl Service<Request, Response = Response, Erro
 
 #[cfg(test)]
 mod tests {
-    use super::log_client;
+    use super::logging_client;
     use http::StatusCode;
     use serde::Deserialize;
     use sqlx::PgPool;
@@ -122,7 +129,7 @@ mod tests {
     #[ignore = "Does an integration call"]
     async fn log_client_logs(db: PgPool) {
         tracing_subscriber::fmt().init();
-        let mut client = log_client(db);
+        let mut client = logging_client(db);
 
         let req = reqwest::Client::new()
             .get("https://dummyjson.com/products/1")

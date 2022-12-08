@@ -120,7 +120,7 @@ impl IntoResponse for ClientError {
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict => StatusCode::CONFLICT,
-            Self::IntegrationError => StatusCode::SERVICE_UNAVAILABLE,
+            Self::IntegrationError => StatusCode::BAD_GATEWAY,
         };
         (status, Json(ErrorBody::new(msg))).into_response()
     }
@@ -153,8 +153,9 @@ pub enum InternalError {
 impl IntoResponse for InternalError {
     fn into_response(self) -> axum::response::Response {
         let status = match self {
-            Self::SqlxError(_) => StatusCode::SERVICE_UNAVAILABLE,
-            Self::AxumSqlxTxError(_) => StatusCode::SERVICE_UNAVAILABLE,
+            Self::SqlxError(_) => StatusCode::BAD_GATEWAY,
+            Self::AxumSqlxTxError(_) => StatusCode::BAD_GATEWAY,
+            Self::ReqwestError(e) if e.is_timeout() => StatusCode::GATEWAY_TIMEOUT,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let mut response =

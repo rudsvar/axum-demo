@@ -8,10 +8,10 @@ use tracing::instrument;
 /// A new request.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NewRequest {
-    /// The sender of the request.
-    pub client: Option<String>,
-    /// The receiver of the request.
-    pub server: Option<String>,
+    /// The receiver of the request. None if self.
+    pub host: String,
+    /// The request method.
+    pub method: String,
     /// The request URI.
     pub uri: String,
     /// The request body.
@@ -27,10 +27,10 @@ pub struct NewRequest {
 pub struct Request {
     /// A unique id for this request.
     pub id: i32,
-    /// The sender of the request.
-    pub client: Option<String>,
     /// The receiver of the request.
-    pub server: Option<String>,
+    pub host: String,
+    /// The request method.
+    pub method: String,
     /// The request URI.
     pub uri: String,
     /// The request body.
@@ -44,18 +44,18 @@ pub struct Request {
 }
 
 /// Creates a new item.
-#[instrument(skip(tx))]
+#[instrument(skip(tx, new_req))]
 pub async fn create_request(tx: &mut Tx, new_req: NewRequest) -> ApiResult<Request> {
-    tracing::info!("Creating request {:?}", new_req);
+    tracing::trace!("Creating request {:?}", new_req);
     let req = sqlx::query_as!(
         Request,
         r#"
-        INSERT INTO requests (client, server, uri, request_body, response_body, status)
+        INSERT INTO requests (host, method, uri, request_body, response_body, status)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
         "#,
-        new_req.client,
-        new_req.server,
+        new_req.host,
+        new_req.method,
         new_req.uri,
         new_req.request_body,
         new_req.response_body,
@@ -63,7 +63,7 @@ pub async fn create_request(tx: &mut Tx, new_req: NewRequest) -> ApiResult<Reque
     )
     .fetch_one(tx)
     .await?;
-    tracing::info!("Created req {:?}", req);
+    tracing::trace!("Created req {:?}", req);
     Ok(req)
 }
 
@@ -79,8 +79,8 @@ mod tests {
         let req = create_request(
             &mut tx,
             NewRequest {
-                client: None,
-                server: None,
+                host: "self".to_string(),
+                method: "get".to_string(),
                 uri: "/foo/bar".to_string(),
                 request_body: None,
                 response_body: Some(r#"{"foo": "bar"}"#.to_string()),

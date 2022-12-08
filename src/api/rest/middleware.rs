@@ -44,8 +44,16 @@ pub(crate) async fn print_request_response(
     // Print request
     let (parts, body) = req.into_parts();
     let req_bytes = buffer_and_print("Request", body).await?;
-    let req_bytes_clone = req_bytes.clone();
-    let req = Request::from_parts(parts, Body::from(req_bytes));
+    let req = Request::from_parts(parts, Body::from(req_bytes.clone()));
+    let host = req
+        .headers()
+        .get(http::header::HOST)
+        .map(|h| h.to_str())
+        .transpose()
+        .map_err(|e| ClientError::BadRequest(e.to_string()))?
+        .map(|str| str.to_string())
+        .ok_or_else(|| ClientError::BadRequest("missing host header".to_string()))?;
+    let method = req.method().to_string();
     let uri = req.uri().to_string();
 
     // Perform request
@@ -54,17 +62,16 @@ pub(crate) async fn print_request_response(
     // Print response
     let (parts, body) = res.into_parts();
     let res_bytes = buffer_and_print("Response", body).await?;
-    let res_bytes_clone = res_bytes.clone();
-    let res = Response::from_parts(parts, Body::from(res_bytes));
+    let res = Response::from_parts(parts, Body::from(res_bytes.clone()));
 
     // Log request
     let mut tx = db.begin().await?;
     let new_req = NewRequest {
-        client: None,
-        server: None,
+        host,
+        method,
         uri,
-        request_body: String::from_utf8(req_bytes_clone.to_vec()).ok(),
-        response_body: String::from_utf8(res_bytes_clone.to_vec()).ok(),
+        request_body: String::from_utf8(req_bytes.to_vec()).ok(),
+        response_body: String::from_utf8(res_bytes.to_vec()).ok(),
         status: res.status().as_u16() as i32,
     };
     let _ = crate::repository::request_repository::create_request(&mut tx, new_req).await?;

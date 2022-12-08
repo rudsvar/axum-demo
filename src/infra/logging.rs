@@ -19,7 +19,7 @@ pub fn init_logging() -> LogGuard {
         .with_writer(non_blocking_stdout)
         .with_filter(EnvFilter::new(&log_level));
 
-    let file_appender = tracing_appender::rolling::hourly("./logs", "trace");
+    let file_appender = tracing_appender::rolling::daily("./logs", "trace");
     let (non_blocking_file_appender, file_guard) = tracing_appender::non_blocking(file_appender);
     let file_appender = tracing_subscriber::fmt::layer()
         .with_ansi(false)
