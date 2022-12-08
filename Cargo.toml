@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 
 # Web
-axum = { version = "0.5.15", features = ["headers"] }
+axum = { version = "0.5.15", features = ["headers", "macros"] }
 axum-extra = { version = "0.3.7", features = ["typed-routing"] }
 axum-sqlx-tx = "0.4.0"
 tower = { version = "0.4.13", features = ["retry"] }

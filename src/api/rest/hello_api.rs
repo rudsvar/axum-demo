@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use tracing::instrument;
 use utoipa::{IntoParams, ToSchema};
 
-///
+/// The hello API endpoints.
 pub fn hello_routes() -> Router {
     Router::new().route("/hello", get(hello))
 }

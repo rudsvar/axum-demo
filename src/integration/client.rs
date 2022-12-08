@@ -10,7 +10,7 @@ use tower::{Service, ServiceBuilder};
 use crate::{
     infra::{
         database::DbPool,
-        error::{ApiError, ClientError, InternalError},
+        error::{ApiError, InternalError},
     },
     repository::request_repository::NewRequest,
 };
@@ -29,7 +29,7 @@ impl LogClient {
 impl Service<Request> for LogClient {
     type Response = Response;
     type Error = ApiError;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(
         &mut self,
@@ -45,7 +45,7 @@ impl Service<Request> for LogClient {
         Box::pin(async move {
             tracing::info!("Sending request: {} {}", req.method(), req.url());
             let method = req.method().to_string();
-            let uri = req.url().to_string();
+            let uri = req.url().path().to_string();
             let host = req
                 .url()
                 .host_str()
@@ -77,7 +77,8 @@ impl Service<Request> for LogClient {
                 response_body: String::from_utf8(bytes.to_vec()).ok(),
                 status: status.as_u16() as i32,
             };
-            let _ = crate::repository::request_repository::create_request(&mut tx, new_req).await;
+            let stored_req =
+                crate::repository::request_repository::create_request(&mut tx, new_req).await?;
             tx.commit().await?;
             // Check if ok
             if status.is_success() {
@@ -96,14 +97,23 @@ impl Service<Request> for LogClient {
                 Ok(Response::from(res))
             } else {
                 tracing::error!("Received response: {}", status);
-                Err(ApiError::ClientError(ClientError::IntegrationError))
+                Err(ApiError::InternalError(InternalError::IntegrationError(
+                    format!("Request with id {} failed", stored_req.id),
+                )))
             }
         })
     }
 }
 
 /// A preconfigured HTTP client.
-pub fn logging_client(db: DbPool) -> impl Service<Request, Response = Response, Error = ApiError> {
+pub fn logging_client(
+    db: DbPool,
+) -> impl Service<
+    Request,
+    Response = Response,
+    Error = ApiError,
+    Future = <LogClient as Service<Request>>::Future,
+> {
     let client = reqwest::Client::new();
     ServiceBuilder::new()
         .rate_limit(1, Duration::from_secs(1))

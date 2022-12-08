@@ -106,9 +106,6 @@ pub enum ClientError {
     /// The resource already exists.
     #[error("conflict")]
     Conflict,
-    /// Integration error.
-    #[error("integration with external system failed")]
-    IntegrationError,
 }
 
 impl IntoResponse for ClientError {
@@ -120,7 +117,6 @@ impl IntoResponse for ClientError {
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict => StatusCode::CONFLICT,
-            Self::IntegrationError => StatusCode::BAD_GATEWAY,
         };
         (status, Json(ErrorBody::new(msg))).into_response()
     }
@@ -145,6 +141,9 @@ pub enum InternalError {
     /// Reqwest-call failed.
     #[error("reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
+    /// Integration error.
+    #[error("integration error: {0}")]
+    IntegrationError(String),
     /// Other miscellaneous errors.
     #[error("{0}")]
     Other(String),
@@ -155,6 +154,7 @@ impl IntoResponse for InternalError {
         let status = match self {
             Self::SqlxError(_) => StatusCode::BAD_GATEWAY,
             Self::AxumSqlxTxError(_) => StatusCode::BAD_GATEWAY,
+            Self::IntegrationError(_) => StatusCode::BAD_GATEWAY,
             Self::ReqwestError(e) if e.is_timeout() => StatusCode::GATEWAY_TIMEOUT,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };

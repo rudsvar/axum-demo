@@ -134,6 +134,7 @@ checksum = "acee9fd5073ab6b045a275b3e709c163dd36c90685219cb21804a147b58dba43"
 dependencies = [
  "async-trait",
  "axum-core 0.2.9",
+ "axum-macros",
  "bitflags",
  "bytes",
  "futures-util",

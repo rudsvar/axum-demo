@@ -6,7 +6,7 @@ use crate::{
     repository::item_repository,
     shutdown,
 };
-use axum::{response::Html, Router};
+use axum::{response::Html, Extension, Router};
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
@@ -24,6 +24,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 pub mod hello_api;
+pub mod integration_api;
 pub mod item_api;
 pub mod middleware;
 pub mod user_api;
@@ -37,6 +38,7 @@ pub mod user_api;
         item_api::list_items,
         user_api::user,
         user_api::admin,
+        integration_api::remote_items
     ),
     components(
         schemas(
@@ -86,10 +88,12 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
             Router::new()
                 .merge(hello_api::hello_routes())
                 .merge(item_api::item_routes())
-                .merge(user_api::user_routes()),
+                .merge(user_api::user_routes())
+                .merge(integration_api::integration_routes()),
         )
         // Layers
         .layer(axum_sqlx_tx::Layer::new_with_error::<ApiError>(db.clone()))
+        .layer(Extension(db.clone()))
         .layer(axum::middleware::from_fn(move |req, next| {
             print_request_response(req, next, db.clone())
         }))
