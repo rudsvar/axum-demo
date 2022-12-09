@@ -28,7 +28,10 @@ pub fn integration_routes() -> Router {
 #[instrument]
 pub async fn remote_items(Extension(db): Extension<PgPool>) -> Result<Json<Vec<Item>>, ApiError> {
     let mut client = logging_client(db);
-    let req = reqwest::Request::new(Method::GET, "http://localhost:8080/api/items".parse().unwrap());
+    let req = reqwest::Request::new(
+        Method::GET,
+        "http://localhost:8080/api/items".parse().unwrap(),
+    );
     let res = client.call(req).await?;
     let res: Vec<Item> = res.json().await.map_err(InternalError::from)?;
     Ok(Json(res))
