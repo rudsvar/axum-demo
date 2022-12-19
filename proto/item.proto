@@ -1,0 +1,33 @@
+syntax = "proto3";
+package item;
+
+service ItemService {
+    rpc CreateItem (CreateItemRequest) returns (CreateItemResponse);
+    rpc ListItems (ListItemsRequest) returns (ListItemsResponse);
+}
+
+message NewItem {
+    string name = 1;
+    string description = 2;
+}
+
+message Item {
+    int32 id = 1;
+    string name = 2;
+    string description = 3;
+}
+
+message CreateItemRequest {
+    NewItem item = 1;
+}
+
+message CreateItemResponse {
+    Item item = 1;
+}
+
+message ListItemsRequest {
+}
+
+message ListItemsResponse {
+    repeated Item items = 1;
+}

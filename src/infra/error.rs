@@ -7,6 +7,7 @@ use axum::{http::HeaderValue, response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
+use tonic::Status;
 use utoipa::ToSchema;
 
 /// A standard error response body.
@@ -164,5 +165,23 @@ impl IntoResponse for InternalError {
             .headers_mut()
             .insert("Retry-After", HeaderValue::from_static("5"));
         response
+    }
+}
+
+impl From<ApiError> for Status {
+    fn from(e: ApiError) -> Self {
+        match e {
+            ApiError::ClientError(e) => match e {
+                ClientError::BadRequest(message) => Status::invalid_argument(message),
+                ClientError::Unauthorized => Status::unauthenticated("unauthenticated"),
+                ClientError::Forbidden => Status::permission_denied("permission denied"),
+                ClientError::NotFound => Status::not_found("resource not found"),
+                ClientError::Conflict => Status::already_exists("resource already exists"),
+            },
+            ApiError::InternalError(e) => {
+                tracing::error!("request failed: {}", e);
+                Status::internal("internal error")
+            }
+        }
     }
 }
