@@ -82,9 +82,7 @@ impl ItemService for ItemServiceImpl {
             })
             .collect();
         // Map item to response type
-        let response = ListItemsResponse {
-            items
-        };
+        let response = ListItemsResponse { items };
         Ok(tonic::Response::new(response))
     }
 }

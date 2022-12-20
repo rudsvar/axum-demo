@@ -1,5 +1,6 @@
 //! The item API implementation.
 
+use super::AppState;
 use crate::{
     infra::{database::DbPool, error::ApiResult},
     repository::item_repository::{Item, NewItem},
@@ -12,7 +13,6 @@ use axum::{
 };
 use http::StatusCode;
 use tracing::instrument;
-use super::AppState;
 
 /// The item API endpoints.
 pub fn item_routes() -> Router<AppState> {
