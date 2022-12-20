@@ -35,16 +35,16 @@
 
 use super::{
     database::Tx,
-    error::{ApiError, ApiResult, ClientError, InternalError},
+    error::{ApiError, ApiResult, ClientError},
+    state::AppState,
 };
 use axum::{
     async_trait,
-    extract::FromRequest,
+    extract::FromRequestParts,
     headers::{authorization::Basic, Authorization},
-    TypedHeader,
+    RequestPartsExt, TypedHeader,
 };
 use cached::proc_macro::cached;
-use sqlx::Postgres;
 use std::marker::PhantomData;
 use tracing::instrument;
 
@@ -195,15 +195,15 @@ impl<R> std::fmt::Debug for User<R> {
 }
 
 #[async_trait]
-impl<B, R> FromRequest<B> for User<R>
+impl<R> FromRequestParts<AppState> for User<R>
 where
-    B: Send,
     R: Role,
 {
     type Rejection = ApiError;
 
-    async fn from_request(
-        req: &mut axum::extract::RequestParts<B>,
+    async fn from_request_parts(
+        req: &mut http::request::Parts,
+        state: &AppState,
     ) -> Result<Self, Self::Rejection> {
         // Get authorization header
         let TypedHeader(auth) = req
@@ -212,10 +212,8 @@ where
             .map_err(|_| ClientError::Unauthorized)?;
 
         // Get db connection
-        let mut tx = req
-            .extract::<axum_sqlx_tx::Tx<Postgres>>()
-            .await
-            .map_err(|_| InternalError::MissingExtension("transaction".to_string()))?;
+        let db = state.db();
+        let mut tx = db.begin().await?;
 
         // Authenticate user
         let user = authenticate(&mut tx, auth.username(), auth.password()).await?;

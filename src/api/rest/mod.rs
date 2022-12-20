@@ -2,11 +2,11 @@
 
 use crate::{
     api::rest::middleware::{print_request_response, MakeRequestIdSpan},
-    infra::error::ApiError,
+    infra::state::AppState,
     repository::item_repository,
     shutdown,
 };
-use axum::{response::Html, Extension, Router};
+use axum::{response::Html, Router};
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
@@ -78,25 +78,25 @@ async fn index() -> Html<&'static str> {
 
 /// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
+    let state = AppState::new(db.clone());
     let app = Router::new()
         .route("/", axum::routing::get(index))
         // Swagger ui
-        .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         // API
         .nest(
             "/api",
-            Router::new()
+            Router::<AppState>::new()
                 .merge(hello_api::hello_routes())
                 .merge(item_api::item_routes())
                 .merge(user_api::user_routes())
                 .merge(integration_api::integration_routes()),
         )
         // Layers
-        .layer(axum_sqlx_tx::Layer::new_with_error::<ApiError>(db.clone()))
-        .layer(Extension(db.clone()))
         .layer(axum::middleware::from_fn(move |req, next| {
             print_request_response(req, next, db.clone())
         }))
+        .with_state(state)
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(
             TraceLayer::new_for_http()

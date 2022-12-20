@@ -76,12 +76,6 @@ impl From<sqlx::Error> for ApiError {
     }
 }
 
-impl From<axum_sqlx_tx::Error> for ApiError {
-    fn from(e: axum_sqlx_tx::Error) -> Self {
-        ApiError::InternalError(InternalError::AxumSqlxTxError(e))
-    }
-}
-
 impl From<bcrypt::BcryptError> for ApiError {
     fn from(e: bcrypt::BcryptError) -> Self {
         ApiError::InternalError(InternalError::BcryptError(e))
@@ -130,9 +124,6 @@ pub enum InternalError {
     /// An [`sqlx`] error.
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error),
-    /// An [`axum_sqlx_tx`] error.
-    #[error("{0}")]
-    AxumSqlxTxError(#[from] axum_sqlx_tx::Error),
     /// An axum extension was not set.
     #[error("missing extension: {0}")]
     MissingExtension(String),
@@ -154,7 +145,6 @@ impl IntoResponse for InternalError {
     fn into_response(self) -> axum::response::Response {
         let status = match self {
             Self::SqlxError(_) => StatusCode::BAD_GATEWAY,
-            Self::AxumSqlxTxError(_) => StatusCode::BAD_GATEWAY,
             Self::IntegrationError(_) => StatusCode::BAD_GATEWAY,
             Self::ReqwestError(e) if e.is_timeout() => StatusCode::GATEWAY_TIMEOUT,
             _ => StatusCode::INTERNAL_SERVER_ERROR,

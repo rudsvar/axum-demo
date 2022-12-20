@@ -1,5 +1,6 @@
 //! The user API implementation.
 
+use super::AppState;
 use crate::infra::{
     error::ApiResult,
     security::{Admin, Role, User},
@@ -8,7 +9,7 @@ use axum::{routing::get, Json, Router};
 use tracing::instrument;
 
 /// The user API endpoints.
-pub fn user_routes() -> Router {
+pub fn user_routes() -> Router<AppState> {
     Router::new()
         .route("/user", get(user))
         .route("/admin", get(admin))

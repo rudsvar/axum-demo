@@ -1,19 +1,19 @@
 //! Implementation of the integration API. An API that calls another service.
 
+use super::AppState;
+use crate::{
+    infra::error::{ApiError, InternalError},
+    integration::client::logging_client,
+    repository::item_repository::Item,
+};
 use axum::{routing::get, Extension, Json, Router};
 use http::Method;
 use sqlx::PgPool;
 use tower::Service;
 use tracing::instrument;
 
-use crate::{
-    infra::error::{ApiError, InternalError},
-    integration::client::logging_client,
-    repository::item_repository::Item,
-};
-
 /// Routes for the integrations API.
-pub fn integration_routes() -> Router {
+pub fn integration_routes() -> Router<AppState> {
     Router::new().route("/remote-items", get(remote_items))
 }
 

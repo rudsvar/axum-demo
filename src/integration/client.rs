@@ -5,24 +5,28 @@
 
 use reqwest::{Client, Request, Response};
 use std::{future::Future, pin::Pin, time::Duration};
-use tower::{Service, ServiceBuilder};
+use tower::{Service, ServiceBuilder, ServiceExt};
 
 use crate::{
     infra::{
         database::DbPool,
-        error::{ApiError, InternalError},
+        error::{ApiError, ApiResult, InternalError},
     },
-    repository::request_repository::NewRequest,
+    repository::request_repository::{self, NewRequest},
 };
 
 /// A HTTP client wrapper for pre- and post-processing requests.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LogClient(Client, DbPool);
 
 impl LogClient {
     /// Wraps a client.
     pub fn new(client: Client, db: DbPool) -> Self {
         Self(client, db)
+    }
+    /// Send a logged HTTP request.
+    pub async fn send(&mut self, request: reqwest::Request) -> ApiResult<reqwest::Response> {
+        self.ready().await?.call(request).await
     }
 }
 
@@ -77,8 +81,7 @@ impl Service<Request> for LogClient {
                 response_body: String::from_utf8(bytes.to_vec()).ok(),
                 status: status.as_u16() as i32,
             };
-            let stored_req =
-                crate::repository::request_repository::create_request(&mut tx, new_req).await?;
+            let stored_req = request_repository::create_request(&mut tx, new_req).await?;
             tx.commit().await?;
             // Check if ok
             if status.is_success() {

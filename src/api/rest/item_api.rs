@@ -1,19 +1,21 @@
 //! The item API implementation.
 
 use crate::{
-    infra::{database::NewTx, error::ApiResult},
+    infra::{database::DbPool, error::ApiResult},
     repository::item_repository::{Item, NewItem},
     service::item_service,
 };
 use axum::{
+    extract::State,
     routing::{get, post},
     Json, Router,
 };
 use http::StatusCode;
 use tracing::instrument;
+use super::AppState;
 
 /// The item API endpoints.
-pub fn item_routes() -> Router {
+pub fn item_routes() -> Router<AppState> {
     Router::new()
         .route("/items", post(create_item))
         .route("/items", get(list_items))
@@ -30,12 +32,14 @@ pub fn item_routes() -> Router {
         (status = 500, description = "Internal error", body = ErrorBody),
     )
 )]
-#[instrument(skip(tx))]
+#[instrument(skip(db))]
 async fn create_item(
-    mut tx: NewTx,
+    db: State<DbPool>,
     Json(new_item): Json<NewItem>,
 ) -> ApiResult<(StatusCode, Json<Item>)> {
+    let mut tx = db.begin().await?;
     let item = item_service::create_item(&mut tx, new_item).await?;
+    tx.commit().await?;
     Ok((StatusCode::CREATED, Json(item)))
 }
 
@@ -48,8 +52,9 @@ async fn create_item(
         (status = 500, description = "Internal error", body = ErrorBody),
     )
 )]
-#[instrument(skip(tx))]
-pub async fn list_items(mut tx: NewTx) -> ApiResult<Json<Vec<Item>>> {
+#[instrument(skip(db))]
+pub async fn list_items(db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
+    let mut tx = db.begin().await?;
     let items = item_service::list_items(&mut tx).await?;
     Ok(Json(items))
 }

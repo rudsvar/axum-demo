@@ -1,6 +1,8 @@
 //! Implementation of the hello API. An API that returns a greeting based on a query parameter.
 
 use crate::service;
+
+use super::AppState;
 use axum::{extract::Query, routing::get, Json, Router};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -8,7 +10,7 @@ use tracing::instrument;
 use utoipa::{IntoParams, ToSchema};
 
 /// The hello API endpoints.
-pub fn hello_routes() -> Router {
+pub fn hello_routes() -> Router<AppState> {
     Router::new().route("/hello", get(hello))
 }
 

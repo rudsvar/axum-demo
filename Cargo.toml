@@ -8,9 +8,8 @@ edition = "2021"
 [dependencies]
 
 # Web
-axum = { version = "0.5.15", features = ["headers", "macros"] }
-axum-extra = { version = "0.3.7", features = ["typed-routing"] }
-axum-sqlx-tx = "0.4.0"
+axum = { version = "0.6.1", features = ["headers", "macros"] }
+axum-extra = { version = "0.4.2", features = ["typed-routing"] }
 tower = { version = "0.4.13", features = ["retry"] }
 tower-http = { version = "0.3.4", features = [
     "tracing",
@@ -31,7 +30,7 @@ tokio = { version = "1.23.0", features = [
 
 # Docs
 utoipa = { version = "2.4.2", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "2.0.2", features = ["axum"] }
+utoipa-swagger-ui = { version = "3.0.1", features = ["axum"] }
 
 # gRPC
 tonic = "0.8.3"
