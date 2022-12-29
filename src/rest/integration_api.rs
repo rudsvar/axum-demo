@@ -2,9 +2,9 @@
 
 use super::AppState;
 use crate::{
+    core::item::item_repository::Item,
     infra::error::{ApiError, InternalError},
     integration::client::logging_client,
-    repository::item_repository::Item,
 };
 use axum::{routing::get, Extension, Json, Router};
 use http::Method;
@@ -39,7 +39,7 @@ pub async fn remote_items(Extension(db): Extension<PgPool>) -> Result<Json<Vec<I
 
 #[cfg(test)]
 mod tests {
-    use crate::{api::rest::integration_api::remote_items, infra::database::DbPool};
+    use crate::{infra::database::DbPool, rest::integration_api::remote_items};
     use axum::Extension;
 
     #[sqlx::test]

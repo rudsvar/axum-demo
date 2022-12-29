@@ -2,9 +2,11 @@
 
 use super::AppState;
 use crate::{
+    core::item::{
+        item_repository::{Item, NewItem},
+        item_service,
+    },
     infra::{database::DbPool, error::ApiResult},
-    repository::item_repository::{Item, NewItem},
-    service::item_service,
 };
 use axum::{
     extract::State,

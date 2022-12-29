@@ -1,8 +1,8 @@
 //! gRPC API implementations.
 
 use crate::{
-    api::grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},
-    api::grpc::item::{item::item_service_server::ItemServiceServer, ItemServiceImpl},
+    grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},
+    grpc::item::{item::item_service_server::ItemServiceServer, ItemServiceImpl},
     infra::database::DbPool,
     shutdown,
 };

@@ -1,9 +1,9 @@
 //! REST API implementations.
 
 use crate::{
-    api::rest::middleware::{print_request_response, MakeRequestIdSpan},
+    core::item::item_repository,
     infra::state::AppState,
-    repository::item_repository,
+    rest::middleware::{print_request_response, MakeRequestIdSpan},
     shutdown,
 };
 use axum::{response::Html, Router};
@@ -23,7 +23,7 @@ use utoipa::{
 };
 use utoipa_swagger_ui::SwaggerUi;
 
-pub mod hello_api;
+pub mod greeting_api;
 pub mod integration_api;
 pub mod item_api;
 pub mod middleware;
@@ -33,7 +33,7 @@ pub mod user_api;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        hello_api::hello,
+        greeting_api::greet,
         item_api::create_item,
         item_api::list_items,
         user_api::user,
@@ -42,7 +42,7 @@ pub mod user_api;
     ),
     components(
         schemas(
-            hello_api::Greeting,
+            greeting_api::Greeting,
             item_repository::NewItem,
             item_repository::Item,
             crate::infra::error::ErrorBody)
@@ -87,7 +87,7 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
         .nest(
             "/api",
             Router::<AppState>::new()
-                .merge(hello_api::hello_routes())
+                .merge(greeting_api::greeting_routes())
                 .merge(item_api::item_routes())
                 .merge(user_api::user_routes())
                 .merge(integration_api::integration_routes()),
@@ -128,8 +128,8 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::rest::{axum_server, hello_api::Greeting},
         infra::{database::DbPool, error::ErrorBody},
+        rest::{axum_server, greeting_api::Greeting},
     };
     use serde::Deserialize;
     use std::net::TcpListener;

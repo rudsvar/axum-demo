@@ -1,7 +1,8 @@
 //! Implementation of a gRPC hello service.
 
+use crate::core::greeting::greeting_service;
+
 use self::hello::{greeter_server::Greeter, HelloReply, HelloRequest};
-use crate::service;
 use tonic::Status;
 
 /// Generated traits and types for the hello gRPC API.
@@ -24,7 +25,7 @@ impl Greeter for MyGreeter {
 
         // Return an instance of type HelloReply
         tracing::debug!("gRPC in: {}", request.name);
-        let message = service::greet_service::greet(&request.name);
+        let message = greeting_service::greet(&request.name);
         tracing::debug!("gRPC out: {}", message);
 
         let reply = hello::HelloReply { message };
@@ -35,7 +36,7 @@ impl Greeter for MyGreeter {
 
 #[cfg(test)]
 mod tests {
-    use crate::api::grpc::greeter::{
+    use crate::grpc::greeter::{
         hello::{greeter_server::Greeter, HelloRequest},
         MyGreeter,
     };

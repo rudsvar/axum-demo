@@ -8,11 +8,11 @@ use std::{future::Future, pin::Pin, time::Duration};
 use tower::{Service, ServiceBuilder, ServiceExt};
 
 use crate::{
+    core::request::request_repository::{self, NewRequest},
     infra::{
         database::DbPool,
         error::{ApiError, ApiResult, InternalError},
     },
-    repository::request_repository::{self, NewRequest},
 };
 
 /// A HTTP client wrapper for pre- and post-processing requests.

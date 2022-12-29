@@ -68,8 +68,7 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{create_item, list_items, Item};
-    use crate::repository::item_repository::NewItem;
+    use super::*;
     use sqlx::PgPool;
 
     #[sqlx::test]

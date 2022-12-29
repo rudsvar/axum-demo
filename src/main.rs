@@ -1,8 +1,8 @@
 //! An example web service with axum.
 
 use axum_demo::{
-    api::{grpc, rest},
     infra::{self},
+    {grpc, rest},
 };
 use sqlx::migrate::Migrator;
 use std::{net::TcpListener, time::Duration};

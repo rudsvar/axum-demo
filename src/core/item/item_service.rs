@@ -2,7 +2,7 @@
 
 use crate::{
     infra::{database::Tx, error::ApiResult},
-    repository::item_repository::{self, Item, NewItem},
+    core::item::item_repository::{self, Item, NewItem},
 };
 use tracing::instrument;
 

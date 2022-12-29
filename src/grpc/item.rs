@@ -5,11 +5,11 @@ use self::item::{
     ListItemsResponse,
 };
 use crate::{
+    core::item::item_repository::{self, NewItem},
     infra::{
         database::DbPool,
         error::{ApiError, ClientError},
     },
-    repository::item_repository::NewItem,
 };
 use tonic::Status;
 
@@ -51,7 +51,7 @@ impl ItemService for ItemServiceImpl {
             description: Some(new_item.description),
         };
         // Create item
-        let item = crate::repository::item_repository::create_item(&mut tx, new_item).await?;
+        let item = item_repository::create_item(&mut tx, new_item).await?;
         // Map item to response type
         let item = self::item::Item {
             id: item.id,
@@ -72,7 +72,7 @@ impl ItemService for ItemServiceImpl {
         // Create transaction
         let mut tx = self.db.begin().await.map_err(ApiError::from)?;
         // List items
-        let items = crate::repository::item_repository::list_items(&mut tx).await?;
+        let items = item_repository::list_items(&mut tx).await?;
         let items: Vec<_> = items
             .into_iter()
             .map(|item| item::Item {

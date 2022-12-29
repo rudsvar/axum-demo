@@ -22,11 +22,11 @@
 //! The REST API can be seen at `http://localhost:8080/swagger-ui/index.html`,
 //! and the gRPC contracts can be found in the `./proto`-folder.
 
-pub mod api;
+pub mod core;
+pub mod grpc;
 pub mod infra;
 pub mod integration;
-pub mod repository;
-pub mod service;
+pub mod rest;
 
 /// Completes when when ctrl-c is pressed.
 pub(crate) async fn shutdown(name: &str) {
