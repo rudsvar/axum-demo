@@ -1,8 +1,8 @@
 //! A service for interacting with items.
 
 use crate::{
-    infra::{database::Tx, error::ApiResult},
     core::item::item_repository::{self, Item, NewItem},
+    infra::{database::Tx, error::ApiResult},
 };
 use tracing::instrument;
 
