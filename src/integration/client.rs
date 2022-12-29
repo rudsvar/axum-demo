@@ -1,6 +1,6 @@
 //! Utilities for performing integration calls over HTTP.
 //!
-//! Examples include [`LogClient`] and [`log_client`] for creating
+//! Examples include [`LogClient`] and [`logging_client`] for creating
 //! HTTP clients that automatically log requests.
 
 use reqwest::{Client, Request, Response};

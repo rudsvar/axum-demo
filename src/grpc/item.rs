@@ -15,11 +15,11 @@ use tonic::Status;
 
 /// Generated traits and types for the item gRPC API.
 #[allow(clippy::derive_partial_eq_without_eq, clippy::module_inception)]
-pub(super) mod item {
+pub mod item {
     tonic::include_proto!("item");
 }
 
-/// An struct that should implement [`MyGreeter`].
+/// An struct that should implement [`ItemService`].
 #[derive(Clone, Debug)]
 pub struct ItemServiceImpl {
     db: DbPool,
