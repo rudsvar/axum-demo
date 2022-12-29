@@ -15,7 +15,7 @@ use tonic::Status;
 
 /// Generated traits and types for the item gRPC API.
 #[allow(clippy::derive_partial_eq_without_eq, clippy::module_inception)]
-pub mod item {
+pub(super) mod item {
     tonic::include_proto!("item");
 }
 
