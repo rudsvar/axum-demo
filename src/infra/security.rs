@@ -225,12 +225,6 @@ where
     }
 }
 
-struct UserRow {
-    pub id: i32,
-    pub password: String,
-    pub role: String,
-}
-
 /// Validate a user's password.
 #[cached(
     size = 100,
@@ -244,8 +238,7 @@ struct UserRow {
 #[instrument(skip(conn, password))]
 pub async fn authenticate(conn: &mut Tx, username: &str, password: &str) -> ApiResult<User> {
     tracing::info!("Fetching {}'s password", username);
-    let user = sqlx::query_as!(
-        UserRow,
+    let user = sqlx::query!(
         r#"
         SELECT id, password, role FROM users
         WHERE username = $1
