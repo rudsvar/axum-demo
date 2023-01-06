@@ -81,7 +81,7 @@ impl Service<Request> for LogClient {
                 response_body: String::from_utf8(bytes.to_vec()).ok(),
                 status: status.as_u16() as i32,
             };
-            let stored_req = request_repository::create_request(&mut tx, new_req).await?;
+            let stored_req = request_repository::log_request(&mut tx, new_req).await?;
             tx.commit().await?;
             // Check if ok
             if status.is_success() {

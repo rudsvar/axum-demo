@@ -38,14 +38,18 @@ pub mod user_api;
         item_api::list_items,
         user_api::user,
         user_api::admin,
-        integration_api::remote_items
+        integration_api::remote_items,
+        integration_api::post_to_mq,
+        integration_api::read_from_mq,
     ),
     components(
         schemas(
             greeting_api::Greeting,
             item_repository::NewItem,
             item_repository::Item,
-            crate::infra::error::ErrorBody)
+            integration_api::Message,
+            crate::infra::error::ErrorBody
+        )
     ),
     modifiers(&SecurityAddon)
 )]
@@ -77,8 +81,12 @@ async fn index() -> Html<&'static str> {
 }
 
 /// Starts the axum server.
-pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
-    let state = AppState::new(db.clone());
+pub async fn axum_server(
+    addr: TcpListener,
+    db: PgPool,
+    mq: lapin::Connection,
+) -> Result<(), hyper::Error> {
+    let state = AppState::new(db.clone(), mq);
     let app = Router::new()
         .route("/", axum::routing::get(index))
         // Swagger ui
@@ -138,7 +146,9 @@ mod tests {
         let address = "127.0.0.1";
         let listener = TcpListener::bind(format!("{}:0", address)).unwrap();
         let port = listener.local_addr().unwrap().port();
-        tokio::spawn(axum_server(listener, db));
+        let config = crate::infra::config::load_config().unwrap();
+        let conn = crate::integration::mq::connect(&config.mq).await;
+        tokio::spawn(axum_server(listener, db, conn));
         format!("http://{}:{}/api", address, port)
     }
 

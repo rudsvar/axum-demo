@@ -74,7 +74,7 @@ pub(crate) async fn print_request_response(
         response_body: String::from_utf8(res_bytes.to_vec()).ok(),
         status: res.status().as_u16() as i32,
     };
-    let _ = request_repository::create_request(&mut tx, new_req).await?;
+    let _ = request_repository::log_request(&mut tx, new_req).await?;
     tx.commit().await?;
 
     Ok(res)

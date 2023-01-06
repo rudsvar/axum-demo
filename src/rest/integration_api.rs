@@ -3,21 +3,29 @@
 use super::AppState;
 use crate::{
     core::item::item_repository::Item,
-    infra::error::{ApiError, InternalError},
-    integration::client::logging_client,
+    infra::error::{ApiError, ApiResult, InternalError},
+    integration::{client::logging_client, mq::MqClient},
 };
-use axum::{routing::get, Extension, Json, Router};
-use http::Method;
+use axum::{
+    extract::State,
+    routing::{get, post},
+    Extension, Json, Router,
+};
+use http::{Method, StatusCode};
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tower::Service;
 use tracing::instrument;
+use utoipa::ToSchema;
 
 /// Routes for the integrations API.
 pub fn integration_routes() -> Router<AppState> {
-    Router::new().route("/remote-items", get(remote_items))
+    Router::new()
+        .route("/remote-items", get(remote_items))
+        .route("/mq", post(post_to_mq).get(read_from_mq))
 }
 
-/// A handler for requests to the hello endpoint.
+/// A handler for fetching items from a "remote" system.
 #[utoipa::path(
     get,
     path = "/api/remote-items",
@@ -35,6 +43,57 @@ pub async fn remote_items(Extension(db): Extension<PgPool>) -> Result<Json<Vec<I
     let res = client.call(req).await?;
     let res: Vec<Item> = res.json().await.map_err(InternalError::from)?;
     Ok(Json(res))
+}
+
+/// The MQ message format.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct Message {
+    message: String,
+}
+
+/// Post to the MQ.
+#[utoipa::path(
+    post,
+    path = "/api/mq",
+    request_body = Message,
+    responses(
+        (status = 201, description = "Created"),
+    )
+)]
+#[instrument(skip(state))]
+pub async fn post_to_mq(
+    State(state): State<AppState>,
+    Json(message): Json<Message>,
+) -> ApiResult<StatusCode> {
+    // Get MQ client
+    let conn = state.mq();
+    let client: MqClient<Message> = MqClient::new(conn, "default".to_string()).await?;
+
+    // Publish message to queue
+    tracing::info!("Posting message to queue: {:?}", message);
+    client.publish(&message).await?;
+    Ok(StatusCode::CREATED)
+}
+
+/// Read from the MQ.
+#[utoipa::path(
+    get,
+    path = "/api/mq",
+    responses(
+        (status = 200, description = "Success"),
+    )
+)]
+#[instrument(skip(state))]
+pub async fn read_from_mq(State(state): State<AppState>) -> ApiResult<Json<Option<Message>>> {
+    // Get MQ client
+    let conn = state.mq();
+    let client: MqClient<Message> = MqClient::new(conn, "default".to_string()).await?;
+
+    // Read message from queue
+    let message = client.consume_one().await?;
+    tracing::info!("Read message from queue: {:?}", message);
+
+    Ok(Json(message))
 }
 
 #[cfg(test)]

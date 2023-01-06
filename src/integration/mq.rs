@@ -9,6 +9,52 @@ use lapin::{
     BasicProperties, Channel, Connection, ConnectionProperties, Consumer, Queue,
 };
 use serde::{de::DeserializeOwned, Serialize};
+use std::marker::PhantomData;
+
+/// A client for simplifying interacting with the message queue.
+#[derive(Clone, Debug)]
+pub struct MqClient<T> {
+    channel: Channel,
+    queue: Queue,
+    ty: PhantomData<T>,
+}
+
+impl<T> MqClient<T> {
+    /// Creates a new client.
+    pub async fn new(connection: &Connection, queue: String) -> Result<Self, InternalError> {
+        let channel = connection.create_channel().await?;
+        let queue = queue_declare(&channel, &queue).await?;
+        Ok(Self {
+            channel,
+            queue,
+            ty: PhantomData,
+        })
+    }
+
+    /// Publishes a message to the message queue.
+    pub async fn publish(&self, message: &T) -> Result<Confirmation, InternalError>
+    where
+        T: Serialize,
+    {
+        publish(&self.channel, self.queue.name().as_str(), message).await
+    }
+
+    /// Consumes a message from the message queue.
+    pub async fn consume_one(&self) -> Result<Option<T>, InternalError>
+    where
+        T: DeserializeOwned,
+    {
+        consume_one(&self.channel, self.queue.name().as_str()).await
+    }
+
+    /// Consumes multiple messages from the message queue.
+    pub async fn consume(&self) -> Result<Consumer, InternalError>
+    where
+        T: DeserializeOwned,
+    {
+        consume::<T>(&self.channel, self.queue.name().as_str()).await
+    }
+}
 
 /// Establishes a connection to the message queue.
 pub async fn connect(config: &MqConfig) -> Connection {
@@ -63,8 +109,8 @@ pub async fn consume_one<T: DeserializeOwned>(
         .await?;
     if let Some(delivery) = consumer.next().await {
         let delivery = delivery?;
-        delivery.ack(BasicAckOptions::default()).await?;
         let data = serde_json::from_slice(&delivery.data)?;
+        delivery.ack(BasicAckOptions::default()).await?;
         return Ok(Some(data));
     }
     Ok(None)
