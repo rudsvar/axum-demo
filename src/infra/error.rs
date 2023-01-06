@@ -136,6 +136,12 @@ pub enum InternalError {
     /// Integration error.
     #[error("integration error: {0}")]
     IntegrationError(String),
+    /// Lapin error.
+    #[error("lapin error: {0}")]
+    LapinError(#[from] lapin::Error),
+    /// Serde json error.
+    #[error("serde json error: {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
     /// Other miscellaneous errors.
     #[error("{0}")]
     Other(String),

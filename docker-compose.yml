@@ -22,3 +22,10 @@ services:
       - 16686:16686
       - 14268:14268
       - 9411:9411
+  rabbitmq:
+    image: rabbitmq:3.11.5-management
+    hostname: rabbitmq
+    ports:
+      - 15672:15672
+      - 15692:15692
+      - 5672:5672

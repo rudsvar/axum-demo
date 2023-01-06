@@ -36,7 +36,7 @@ utoipa-swagger-ui = { version = "3.0.1", features = ["axum"] }
 tonic = "0.8.3"
 prost = "0.11.3"
 
-# Database
+# Integration
 sqlx = { version = "0.6.2", default_features = false, features = [
     "runtime-tokio-rustls",
     "macros",
@@ -46,6 +46,8 @@ sqlx = { version = "0.6.2", default_features = false, features = [
     "migrate",
     "offline",
 ] }
+reqwest = { version = "0.11.12", features = ["json"] }
+lapin = "2.1.1"
 
 # Serialization
 serde = { version = "1.0.144", features = ["derive"] }
@@ -69,8 +71,8 @@ thiserror = "1.0.37"
 anyhow = "1.0.65"
 chrono = { version = "0.4.22", features = ["serde"] }
 cached = "0.41.0"
-reqwest = { version = "0.11.12", features = ["json"] }
 bytes = "1.3.0"
+futures = "0.3.25"
 
 [build-dependencies]
 tonic-build = "0.8.4"

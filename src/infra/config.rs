@@ -9,6 +9,8 @@ pub struct Config {
     pub server: ServerConfig,
     /// Database settings.
     pub database: DatabaseConfig,
+    /// Message queue settings.
+    pub mq: MqConfig,
 }
 
 /// Server settings.
@@ -37,6 +39,29 @@ pub struct DatabaseConfig {
     pub host: String,
     /// The database name.
     pub database_name: String,
+}
+
+/// Database settings.
+#[derive(Clone, Debug, Deserialize)]
+pub struct MqConfig {
+    /// The database username.
+    pub username: String,
+    /// The database password.
+    pub password: String,
+    /// The database port.
+    pub port: u16,
+    /// The database host.
+    pub host: String,
+}
+
+impl MqConfig {
+    /// Constructs a connection string.
+    pub fn connection_string(&self) -> String {
+        format!(
+            "amqp://{}:{}@{}:{}",
+            self.username, self.password, self.host, self.port
+        )
+    }
 }
 
 /// Retrieve [`Config`] from the default configuration file.
