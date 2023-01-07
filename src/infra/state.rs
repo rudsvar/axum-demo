@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use super::database::DbPool;
-use crate::integration::client::LogClient;
+use crate::integration::http::HttpClient;
 use axum::extract::FromRef;
 use lapin::Connection;
 
@@ -14,7 +14,7 @@ use lapin::Connection;
 #[derive(Clone, Debug, FromRef)]
 pub struct AppState {
     db: DbPool,
-    client: LogClient,
+    client: HttpClient,
     mq: Arc<Connection>,
 }
 
@@ -22,7 +22,7 @@ impl AppState {
     /// Constructs a new [`AppState`].
     pub fn new(db: DbPool, mq: Connection) -> Self {
         let client = reqwest::Client::new();
-        let client = LogClient::new(client, db.clone());
+        let client = HttpClient::new(client, db.clone());
         Self {
             db,
             client,
@@ -36,7 +36,7 @@ impl AppState {
     }
 
     /// Returns the HTTP client.
-    pub fn client(&self) -> &LogClient {
+    pub fn client(&self) -> &HttpClient {
         &self.client
     }
 

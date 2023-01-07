@@ -4,7 +4,7 @@ use super::AppState;
 use crate::{
     core::item::item_repository::Item,
     infra::error::{ApiError, ApiResult, InternalError},
-    integration::{client::logging_client, mq::MqClient},
+    integration::{http::http_client, mq::MqClient},
 };
 use axum::{
     extract::State,
@@ -35,7 +35,7 @@ pub fn integration_routes() -> Router<AppState> {
 )]
 #[instrument]
 pub async fn remote_items(Extension(db): Extension<PgPool>) -> Result<Json<Vec<Item>>, ApiError> {
-    let mut client = logging_client(db);
+    let mut client = http_client(db);
     let req = reqwest::Request::new(
         Method::GET,
         "http://localhost:8080/api/items".parse().unwrap(),
