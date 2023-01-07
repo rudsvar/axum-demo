@@ -1,6 +1,11 @@
 //! Types and functions for storing and loading items from the database.
 
-use crate::infra::{database::Tx, error::ApiResult};
+use crate::infra::{
+    database::{DbPool, Tx},
+    error::{ApiError, ApiResult, InternalError},
+};
+use async_stream::try_stream;
+use futures::{Stream, StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Instrument};
 use utoipa::ToSchema;
@@ -62,8 +67,26 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
     .fetch_all(tx)
     .instrument(tracing::info_span!("fetch_all"))
     .await?;
-    tracing::info!("Got items {:?}", items);
+    tracing::info!("Listed {} items", items.len());
     Ok(items)
+}
+
+/// Streams all items.
+#[instrument(skip(db))]
+pub fn stream_items(db: DbPool) -> impl Stream<Item = ApiResult<Item>> {
+    tracing::info!("Streaming item");
+    let items = try_stream! {
+        let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#)
+            .fetch(&db)
+            .map_err(|e| ApiError::InternalError(InternalError::Other(e.to_string())));
+        let mut total = 0;
+        while let Some(item) = items.next().await {
+            yield item?;
+            total += 1;
+        }
+        tracing::info!("Streamed {} items", total);
+    };
+    Box::pin(items)
 }
 
 #[cfg(test)]

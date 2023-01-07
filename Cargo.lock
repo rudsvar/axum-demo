@@ -336,6 +336,7 @@ name = "axum-demo"
 version = "0.1.12"
 dependencies = [
  "anyhow",
+ "async-stream",
  "axum",
  "axum-extra",
  "bcrypt",
@@ -385,7 +386,10 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "serde",
+ "serde_json",
  "tokio",
+ "tokio-stream",
+ "tokio-util",
  "tower",
  "tower-http",
  "tower-layer",
