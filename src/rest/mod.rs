@@ -3,7 +3,7 @@
 use crate::{
     core::item::item_repository,
     infra::state::AppState,
-    rest::middleware::{print_request_response, MakeRequestIdSpan},
+    rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
 };
 use axum::{response::Html, Router};
@@ -36,6 +36,7 @@ pub mod user_api;
         greeting_api::greet,
         item_api::create_item,
         item_api::list_items,
+        item_api::stream_items,
         user_api::user,
         user_api::admin,
         integration_api::remote_items,
@@ -102,7 +103,7 @@ pub async fn axum_server(
         )
         // Layers
         .layer(axum::middleware::from_fn(move |req, next| {
-            print_request_response(req, next, db.clone())
+            log_request_response(req, next, db.clone())
         }))
         .with_state(state)
         .layer(PropagateRequestIdLayer::x_request_id())

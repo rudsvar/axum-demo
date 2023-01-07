@@ -36,15 +36,15 @@ impl<B> MakeSpan<B> for MakeRequestIdSpan {
 }
 
 /// Print and log the request and response.
-pub(crate) async fn print_request_response(
+pub(crate) async fn log_request_response(
     req: hyper::Request<Body>,
     next: Next<Body>,
     db: DbPool,
 ) -> Result<impl IntoResponse, ApiError> {
     // Print request
     let (parts, body) = req.into_parts();
-    let req_bytes = buffer_and_print("Request", body).await?;
-    let req = Request::from_parts(parts, Body::from(req_bytes.clone()));
+    // let req_bytes = buffer_and_print("Request", body).await?;
+    let req = Request::from_parts(parts, body);
     let host = req
         .headers()
         .get(http::header::HOST)
@@ -61,8 +61,8 @@ pub(crate) async fn print_request_response(
 
     // Print response
     let (parts, body) = res.into_parts();
-    let res_bytes = buffer_and_print("Response", body).await?;
-    let res = Response::from_parts(parts, Body::from(res_bytes.clone()));
+    // let res_bytes = buffer_and_print("Response", body).await?;
+    let res = Response::from_parts(parts, body);
 
     // Log request
     let mut tx = db.begin().await?;
@@ -70,8 +70,8 @@ pub(crate) async fn print_request_response(
         host,
         method,
         uri,
-        request_body: String::from_utf8(req_bytes.to_vec()).ok(),
-        response_body: String::from_utf8(res_bytes.to_vec()).ok(),
+        request_body: None,
+        response_body: None,
         status: res.status().as_u16() as i32,
     };
     let _ = request_repository::log_request(&mut tx, new_req).await?;
@@ -81,6 +81,7 @@ pub(crate) async fn print_request_response(
 }
 
 /// Read the entire request body stream and store it in memory.
+#[allow(dead_code)]
 async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, ApiError>
 where
     B: axum::body::HttpBody,
