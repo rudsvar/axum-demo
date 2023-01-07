@@ -20,6 +20,11 @@ jobs:
           POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
+      rabbitmq:
+        image: rabbitmq:3.11.5
+        hostname: rabbitmq
+        ports:
+          - 5672:5672
     env:
       SQLX_VERSION: 0.6.2
       CARGO_BUMP_VERSION: 1.1.0
