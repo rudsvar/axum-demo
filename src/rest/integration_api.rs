@@ -4,7 +4,10 @@ use super::AppState;
 use crate::{
     core::item::item_repository::Item,
     infra::error::{ApiError, ApiResult, InternalError},
-    integration::{http::http_client, mq::{MqClient, MqPool}},
+    integration::{
+        http::http_client,
+        mq::{MqClient, MqPool},
+    },
 };
 use axum::{
     extract::State,

@@ -1,6 +1,5 @@
 //! A service for interacting with items.
 
-use std::time::Duration;
 use crate::{
     core::item::item_repository::{self, Item, NewItem},
     infra::{
@@ -9,6 +8,7 @@ use crate::{
     },
 };
 use futures::Stream;
+use std::time::Duration;
 use tracing::instrument;
 
 /// Creates a new item.

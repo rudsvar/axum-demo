@@ -1,6 +1,5 @@
 //! Types and functions for storing and loading items from the database.
 
-use std::time::Duration;
 use crate::infra::{
     database::{DbConnection, Tx},
     error::ApiResult,
@@ -8,6 +7,7 @@ use crate::infra::{
 use async_stream::try_stream;
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tracing::{instrument, Instrument};
 use utoipa::ToSchema;
 
