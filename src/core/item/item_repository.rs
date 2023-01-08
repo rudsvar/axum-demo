@@ -1,5 +1,6 @@
 //! Types and functions for storing and loading items from the database.
 
+use std::time::Duration;
 use crate::infra::{
     database::{DbConnection, Tx},
     error::ApiResult,
@@ -73,7 +74,10 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
 
 /// Streams all items.
 #[instrument(skip(conn))]
-pub fn stream_items(mut conn: DbConnection) -> impl Stream<Item = ApiResult<Item>> {
+pub fn stream_items(
+    mut conn: DbConnection,
+    throttle: Duration,
+) -> impl Stream<Item = ApiResult<Item>> {
     tracing::info!("Streaming items");
     let items = try_stream! {
         let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#).fetch(&mut conn);
@@ -81,6 +85,7 @@ pub fn stream_items(mut conn: DbConnection) -> impl Stream<Item = ApiResult<Item
         while let Some(item) = items.next().await {
             yield item?;
             total += 1;
+            tokio::time::sleep(throttle).await;
         }
         tracing::info!("Streamed {} items", total);
     };

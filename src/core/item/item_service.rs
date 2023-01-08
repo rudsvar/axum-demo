@@ -1,5 +1,6 @@
 //! A service for interacting with items.
 
+use std::time::Duration;
 use crate::{
     core::item::item_repository::{self, Item, NewItem},
     infra::{
@@ -26,6 +27,6 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
 
 /// Streams all items.
 #[instrument(skip(conn))]
-pub fn stream_items(conn: DbConnection) -> impl Stream<Item = ApiResult<Item>> {
-    item_repository::stream_items(conn)
+pub fn stream_items(conn: DbConnection, throttle: Duration) -> impl Stream<Item = ApiResult<Item>> {
+    item_repository::stream_items(conn, throttle)
 }

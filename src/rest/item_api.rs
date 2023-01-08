@@ -1,5 +1,7 @@
 //! The item API implementation.
 
+use std::time::Duration;
+
 use super::AppState;
 use crate::{
     core::item::{
@@ -8,18 +10,20 @@ use crate::{
     },
     infra::{
         database::DbPool,
-        error::{ApiError, ApiResult},
+        error::{ApiError, ApiResult}, security::{User, Admin},
     },
 };
 use axum::{
-    extract::State,
+    extract::{Query, State},
     routing::{get, post},
     Json, Router,
 };
 use axum_extra::{json_lines::AsResponse, response::JsonLines};
 use futures::Stream;
 use http::StatusCode;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
+use utoipa::IntoParams;
 
 /// The item API endpoints.
 pub fn item_routes() -> Router<AppState> {
@@ -67,21 +71,32 @@ pub async fn list_items(db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
     Ok(Json(items))
 }
 
+/// Options for how to stream result.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, IntoParams)]
+pub struct StreamOptions {
+    /// The delay between each result in milliseconds.
+    throttle: Option<u64>,
+}
+
 /// Streams all items.
 #[utoipa::path(
     get,
     path = "/api/items2",
+    params(StreamOptions),
     responses(
         (status = 200, description = "Success", body = [Item]),
         (status = 500, description = "Internal error", body = ErrorBody),
     )
 )]
-#[instrument(skip(db))]
+#[instrument(skip(db, stream_options))]
 pub async fn stream_items<'a>(
     State(db): State<DbPool>,
+    Query(stream_options): Query<StreamOptions>,
+    user: User<Admin>
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {
     let conn = db.acquire().await?;
-    Ok(JsonLines::new(item_service::stream_items(conn)))
+    let throttle = Duration::from_millis(stream_options.throttle.unwrap_or(0));
+    Ok(JsonLines::new(item_service::stream_items(conn, throttle)))
 }
 
 #[cfg(test)]
