@@ -2,7 +2,7 @@
 
 use super::config::DatabaseConfig;
 use sqlx::{
-    pool::PoolOptions,
+    pool::{PoolConnection, PoolOptions},
     postgres::{PgConnectOptions, PgSslMode},
     ConnectOptions, PgPool, Postgres,
 };
@@ -15,6 +15,9 @@ pub type Tx = sqlx::Transaction<'static, Postgres>;
 
 /// A common database pool type.
 pub type DbPool = PgPool;
+
+/// A common database pool type.
+pub type DbConnection = PoolConnection<Postgres>;
 
 /// Connects to the database based on some configuration.
 pub fn init_db(config: &DatabaseConfig) -> PgPool {

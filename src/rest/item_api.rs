@@ -79,8 +79,9 @@ pub async fn list_items(db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
 #[instrument(skip(db))]
 pub async fn stream_items<'a>(
     State(db): State<DbPool>,
-) -> JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse> {
-    JsonLines::new(item_service::stream_items(db))
+) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {
+    let conn = db.acquire().await?;
+    Ok(JsonLines::new(item_service::stream_items(conn)))
 }
 
 #[cfg(test)]

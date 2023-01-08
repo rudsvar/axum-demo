@@ -3,7 +3,7 @@
 use crate::{
     core::item::item_repository::{self, Item, NewItem},
     infra::{
-        database::{DbPool, Tx},
+        database::{DbConnection, Tx},
         error::ApiResult,
     },
 };
@@ -25,7 +25,7 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
 }
 
 /// Streams all items.
-#[instrument(skip(db))]
-pub fn stream_items(db: DbPool) -> impl Stream<Item = ApiResult<Item>> {
-    item_repository::stream_items(db)
+#[instrument(skip(conn))]
+pub fn stream_items(conn: DbConnection) -> impl Stream<Item = ApiResult<Item>> {
+    item_repository::stream_items(conn)
 }

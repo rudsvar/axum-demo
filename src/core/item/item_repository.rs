@@ -1,11 +1,11 @@
 //! Types and functions for storing and loading items from the database.
 
 use crate::infra::{
-    database::{DbPool, Tx},
-    error::{ApiError, ApiResult, InternalError},
+    database::{DbConnection, Tx},
+    error::ApiResult,
 };
 use async_stream::try_stream;
-use futures::{Stream, StreamExt, TryStreamExt};
+use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Instrument};
 use utoipa::ToSchema;
@@ -72,13 +72,11 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
 }
 
 /// Streams all items.
-#[instrument(skip(db))]
-pub fn stream_items(db: DbPool) -> impl Stream<Item = ApiResult<Item>> {
-    tracing::info!("Streaming item");
+#[instrument(skip(conn))]
+pub fn stream_items(mut conn: DbConnection) -> impl Stream<Item = ApiResult<Item>> {
+    tracing::info!("Streaming items");
     let items = try_stream! {
-        let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#)
-            .fetch(&db)
-            .map_err(|e| ApiError::InternalError(InternalError::Other(e.to_string())));
+        let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#).fetch(&mut conn);
         let mut total = 0;
         while let Some(item) = items.next().await {
             yield item?;
