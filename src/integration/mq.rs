@@ -1,12 +1,16 @@
 //! Utilities for integrating with a message queue.
 
-use crate::infra::{config::MqConfig, error::InternalError};
-use futures::StreamExt;
+use crate::infra::{
+    config::MqConfig,
+    error::{ApiError, InternalError},
+};
+use async_stream::try_stream;
+use futures::{Stream, StreamExt, TryStreamExt};
 use lapin::{
     options::{BasicAckOptions, BasicConsumeOptions, BasicPublishOptions, QueueDeclareOptions},
     publisher_confirm::Confirmation,
     types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties, Consumer, Queue,
+    BasicProperties, Channel, Connection, ConnectionProperties, Queue,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::marker::PhantomData;
@@ -15,7 +19,7 @@ use std::marker::PhantomData;
 #[derive(Clone, Debug)]
 pub struct MqClient<T> {
     channel: Channel,
-    queue: Queue,
+    queue: String,
     ty: PhantomData<T>,
 }
 
@@ -23,7 +27,7 @@ impl<T> MqClient<T> {
     /// Creates a new client.
     pub async fn new(connection: &Connection, queue: String) -> Result<Self, InternalError> {
         let channel = connection.create_channel().await?;
-        let queue = queue_declare(&channel, &queue).await?;
+        queue_declare(&channel, &queue).await?;
         Ok(Self {
             channel,
             queue,
@@ -36,7 +40,7 @@ impl<T> MqClient<T> {
     where
         T: Serialize,
     {
-        publish(&self.channel, self.queue.name().as_str(), message).await
+        publish(&self.channel, &self.queue, message).await
     }
 
     /// Consumes a message from the message queue.
@@ -44,15 +48,15 @@ impl<T> MqClient<T> {
     where
         T: DeserializeOwned,
     {
-        consume_one(&self.channel, self.queue.name().as_str()).await
+        consume_one(&self.channel, &self.queue).await
     }
 
     /// Consumes multiple messages from the message queue.
-    pub async fn consume(&self) -> Result<Consumer, InternalError>
+    pub fn consume(self) -> impl Stream<Item = Result<T, ApiError>>
     where
         T: DeserializeOwned,
     {
-        consume::<T>(&self.channel, self.queue.name().as_str()).await
+        consume(self.channel, self.queue)
     }
 }
 
@@ -117,19 +121,29 @@ pub async fn consume_one<T: DeserializeOwned>(
 }
 
 /// Consumes messages from a queue.
-pub async fn consume<T: DeserializeOwned>(
-    channel: &Channel,
-    queue: &str,
-) -> Result<Consumer, InternalError> {
-    let consumer = channel
-        .basic_consume(
-            queue,
-            "consume",
-            BasicConsumeOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-    Ok(consumer)
+pub fn consume<T: DeserializeOwned>(
+    channel: Channel,
+    queue: String,
+) -> impl Stream<Item = Result<T, ApiError>> {
+    let stream = try_stream! {
+        // Create consumer
+        let mut consumer = channel
+            .basic_consume(
+                &queue,
+                "consume",
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+            .await?;
+        // Yield values from consumer after deserializing
+        while let Some(delivery) = consumer.next().await {
+            let delivery = delivery?;
+            let data: T = serde_json::from_slice(&delivery.data)?;
+            delivery.ack(BasicAckOptions::default()).await?;
+            yield data;
+        }
+    };
+    stream.map_err(ApiError::InternalError)
 }
 
 #[cfg(test)]

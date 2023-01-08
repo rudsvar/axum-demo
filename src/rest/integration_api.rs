@@ -11,6 +11,8 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
+use axum_extra::{json_lines::AsResponse, response::JsonLines};
+use futures::Stream;
 use http::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -23,6 +25,7 @@ pub fn integration_routes() -> Router<AppState> {
     Router::new()
         .route("/remote-items", get(remote_items))
         .route("/mq", post(post_to_mq).get(read_from_mq))
+        .route("/mq2", get(stream_from_mq))
 }
 
 /// A handler for fetching items from a "remote" system.
@@ -75,7 +78,7 @@ pub async fn post_to_mq(
     Ok(StatusCode::CREATED)
 }
 
-/// Read from the MQ.
+/// Read one message from the MQ.
 #[utoipa::path(
     get,
     path = "/api/mq",
@@ -94,6 +97,28 @@ pub async fn read_from_mq(State(state): State<AppState>) -> ApiResult<Json<Optio
     tracing::info!("Read message from queue: {:?}", message);
 
     Ok(Json(message))
+}
+
+/// Stream from the MQ.
+#[utoipa::path(
+    get,
+    path = "/api/mq2",
+    responses(
+        (status = 200, description = "Success"),
+    )
+)]
+#[instrument(skip(state))]
+pub async fn stream_from_mq(
+    State(state): State<AppState>,
+) -> ApiResult<JsonLines<impl Stream<Item = Result<Message, ApiError>>, AsResponse>> {
+    // Get MQ client
+    let conn = state.mq();
+    let client: MqClient<Message> = MqClient::new(conn, "default".to_string()).await?;
+
+    // Read message from queue
+    let stream = client.consume();
+
+    Ok(JsonLines::new(stream))
 }
 
 #[cfg(test)]
