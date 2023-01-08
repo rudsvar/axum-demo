@@ -163,7 +163,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires mq"]
     async fn send_and_recv() {
         let config = load_config().unwrap();
         let conn = init_mq(&config.mq).await.unwrap();
@@ -180,31 +179,5 @@ mod tests {
             publish(&sender, queue, &message).await.unwrap();
         });
         consume_one::<Message>(&receiver, queue).await.unwrap();
-    }
-
-    #[tokio::test]
-    #[ignore = "requires mq"]
-    async fn send_test() {
-        let config = load_config().unwrap();
-        let pool = init_mq(&config.mq).await.unwrap();
-        let conn = pool.get().await.unwrap();
-        let sender = conn.create_channel().await.unwrap();
-        let message = Message {
-            name: "foo".to_string(),
-            age: 212,
-        };
-        let queue = "hello";
-        queue_declare(&sender, queue).await.unwrap();
-        publish(&sender, queue, &message).await.unwrap();
-    }
-
-    #[tokio::test]
-    #[ignore = "requires mq"]
-    async fn recv_test() {
-        let config = load_config().unwrap();
-        let pool = init_mq(&config.mq).await.unwrap();
-        let conn = pool.get().await.unwrap();
-        let channel = conn.create_channel().await.unwrap();
-        consume_one::<Message>(&channel, "hello").await.unwrap();
     }
 }
