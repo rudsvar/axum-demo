@@ -4,7 +4,7 @@ use super::AppState;
 use crate::{
     core::item::item_repository::Item,
     infra::error::{ApiError, ApiResult, InternalError},
-    integration::{http::http_client, mq::MqClient},
+    integration::{http::http_client, mq::{MqClient, MqPool}},
 };
 use axum::{
     extract::State,
@@ -63,14 +63,14 @@ pub struct Message {
         (status = 201, description = "Created"),
     )
 )]
-#[instrument(skip(state))]
+#[instrument(skip(pool))]
 pub async fn post_to_mq(
-    State(state): State<AppState>,
+    State(pool): State<MqPool>,
     Json(message): Json<Message>,
 ) -> ApiResult<StatusCode> {
     // Get MQ client
-    let conn = state.mq();
-    let client: MqClient<Message> = MqClient::new(conn, "default".to_string()).await?;
+    let conn = pool.get().await?;
+    let client: MqClient<Message> = MqClient::new(&conn, "default".to_string()).await?;
 
     // Publish message to queue
     tracing::info!("Posting message to queue: {:?}", message);
@@ -86,11 +86,11 @@ pub async fn post_to_mq(
         (status = 200, description = "Success"),
     )
 )]
-#[instrument(skip(state))]
-pub async fn read_from_mq(State(state): State<AppState>) -> ApiResult<Json<Option<Message>>> {
+#[instrument(skip(pool))]
+pub async fn read_from_mq(State(pool): State<MqPool>) -> ApiResult<Json<Option<Message>>> {
     // Get MQ client
-    let conn = state.mq();
-    let client: MqClient<Message> = MqClient::new(conn, "default".to_string()).await?;
+    let conn = pool.get().await?;
+    let client: MqClient<Message> = MqClient::new(&conn, "default".to_string()).await?;
 
     // Read message from queue
     let message = client.consume_one().await?;
@@ -107,13 +107,13 @@ pub async fn read_from_mq(State(state): State<AppState>) -> ApiResult<Json<Optio
         (status = 200, description = "Success"),
     )
 )]
-#[instrument(skip(state))]
+#[instrument(skip(pool))]
 pub async fn stream_from_mq(
-    State(state): State<AppState>,
+    State(pool): State<MqPool>,
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Message, ApiError>>, AsResponse>> {
     // Get MQ client
-    let conn = state.mq();
-    let client: MqClient<Message> = MqClient::new(conn, "default".to_string()).await?;
+    let conn = pool.get().await?;
+    let client: MqClient<Message> = MqClient::new(&conn, "default".to_string()).await?;
 
     // Read message from queue
     let stream = client.consume();

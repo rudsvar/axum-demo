@@ -82,6 +82,12 @@ impl From<bcrypt::BcryptError> for ApiError {
     }
 }
 
+impl From<deadpool_lapin::PoolError> for ApiError {
+    fn from(e: deadpool_lapin::PoolError) -> Self {
+        ApiError::InternalError(InternalError::LapinPoolError(e))
+    }
+}
+
 /// Errors caused by the client.
 /// The client can do something to fix these.
 #[derive(Debug, thiserror::Error)]
@@ -139,6 +145,9 @@ pub enum InternalError {
     /// Lapin error.
     #[error("lapin error: {0}")]
     LapinError(#[from] lapin::Error),
+    /// Lapin pool error.
+    #[error("lapin error: {0}")]
+    LapinPoolError(#[from] deadpool_lapin::PoolError),
     /// Serde json error.
     #[error("serde json error: {0}")]
     SerdeJsonError(#[from] serde_json::Error),

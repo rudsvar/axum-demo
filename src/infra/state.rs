@@ -3,31 +3,24 @@
 //! Used for access to common resources such as a
 //! database pool or a preconfigured http client.
 
-use std::sync::Arc;
-
 use super::database::DbPool;
-use crate::integration::http::HttpClient;
+use crate::integration::{http::HttpClient, mq::MqPool};
 use axum::extract::FromRef;
-use lapin::Connection;
 
 /// Global application state.
 #[derive(Clone, Debug, FromRef)]
 pub struct AppState {
     db: DbPool,
     client: HttpClient,
-    mq: Arc<Connection>,
+    mq: MqPool,
 }
 
 impl AppState {
     /// Constructs a new [`AppState`].
-    pub fn new(db: DbPool, mq: Connection) -> Self {
+    pub fn new(db: DbPool, mq: MqPool) -> Self {
         let client = reqwest::Client::new();
         let client = HttpClient::new(client, db.clone());
-        Self {
-            db,
-            client,
-            mq: Arc::new(mq),
-        }
+        Self { db, client, mq }
     }
 
     /// Returns the database pool.
@@ -36,12 +29,12 @@ impl AppState {
     }
 
     /// Returns the HTTP client.
-    pub fn client(&self) -> &HttpClient {
+    pub fn http(&self) -> &HttpClient {
         &self.client
     }
 
     /// Returns the MQ connection.
-    pub fn mq(&self) -> &Connection {
+    pub fn mq(&self) -> &MqPool {
         &self.mq
     }
 }

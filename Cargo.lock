@@ -345,6 +345,7 @@ dependencies = [
  "chrono",
  "config",
  "criterion",
+ "deadpool-lapin",
  "futures",
  "http",
  "hyper",
@@ -912,6 +913,39 @@ dependencies = [
  "lock_api",
  "once_cell",
  "parking_lot_core 0.9.5",
+]
+
+[[package]]
+name = "deadpool"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "421fe0f90f2ab22016f32a9881be5134fdd71c65298917084b0c7477cbc3856e"
+dependencies = [
+ "async-trait",
+ "deadpool-runtime",
+ "num_cpus",
+ "retain_mut",
+ "tokio",
+]
+
+[[package]]
+name = "deadpool-lapin"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20ed9da47e51ead8acbf364b4c5c311fb4d7dd3efa9dab91ee41cac05b59f313"
+dependencies = [
+ "deadpool",
+ "lapin",
+ "tokio-executor-trait",
+]
+
+[[package]]
+name = "deadpool-runtime"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eaa37046cc0f6c3cc6090fbdbf73ef0b8ef4cfcc37f6befc0020f63e8cf121e1"
+dependencies = [
+ "tokio",
 ]
 
 [[package]]
@@ -2420,6 +2454,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "retain_mut"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4389f1d5789befaf6029ebd9f7dac4af7f7e3d61b69d4f30e2ac02b57e7712b0"
+
+[[package]]
 name = "ring"
 version = "0.16.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3072,6 +3112,17 @@ dependencies = [
  "socket2",
  "tokio-macros",
  "windows-sys 0.42.0",
+]
+
+[[package]]
+name = "tokio-executor-trait"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b78630814cbcdf383c949bd8f17c3cfe3142e93b0d5801bdcae4b2a5275db7e"
+dependencies = [
+ "async-trait",
+ "executor-trait",
+ "tokio",
 ]
 
 [[package]]

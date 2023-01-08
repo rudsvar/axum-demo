@@ -5,6 +5,7 @@ use crate::infra::{
     error::{ApiError, InternalError},
 };
 use async_stream::try_stream;
+use deadpool_lapin::{Manager, Pool};
 use futures::{Stream, StreamExt, TryStreamExt};
 use lapin::{
     options::{BasicAckOptions, BasicConsumeOptions, BasicPublishOptions, QueueDeclareOptions},
@@ -14,6 +15,9 @@ use lapin::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::marker::PhantomData;
+
+/// A common MQ pool type.
+pub type MqPool = deadpool_lapin::Pool;
 
 /// A client for simplifying interacting with the message queue.
 #[derive(Clone, Debug)]
@@ -61,12 +65,12 @@ impl<T> MqClient<T> {
 }
 
 /// Establishes a connection to the message queue.
-pub async fn connect(config: &MqConfig) -> Connection {
+pub async fn init_mq(config: &MqConfig) -> Result<Pool, InternalError> {
     let addr = config.connection_string();
-    let conn = Connection::connect(&addr, ConnectionProperties::default())
-        .await
-        .unwrap();
-    conn
+    let manager = Manager::new(addr, ConnectionProperties::default());
+    Pool::builder(manager)
+        .build()
+        .map_err(|e| InternalError::Other(e.to_string()))
 }
 
 /// Declares a new queue.
@@ -162,7 +166,8 @@ mod tests {
     #[ignore = "requires mq"]
     async fn send_and_recv() {
         let config = load_config().unwrap();
-        let conn = connect(&config.mq).await;
+        let conn = init_mq(&config.mq).await.unwrap();
+        let conn = conn.get().await.unwrap();
         let sender = conn.create_channel().await.unwrap();
         let receiver = conn.create_channel().await.unwrap();
         let message = Message {
@@ -181,7 +186,8 @@ mod tests {
     #[ignore = "requires mq"]
     async fn send_test() {
         let config = load_config().unwrap();
-        let conn = connect(&config.mq).await;
+        let pool = init_mq(&config.mq).await.unwrap();
+        let conn = pool.get().await.unwrap();
         let sender = conn.create_channel().await.unwrap();
         let message = Message {
             name: "foo".to_string(),
@@ -196,7 +202,8 @@ mod tests {
     #[ignore = "requires mq"]
     async fn recv_test() {
         let config = load_config().unwrap();
-        let conn = connect(&config.mq).await;
+        let pool = init_mq(&config.mq).await.unwrap();
+        let conn = pool.get().await.unwrap();
         let channel = conn.create_channel().await.unwrap();
         consume_one::<Message>(&channel, "hello").await.unwrap();
     }

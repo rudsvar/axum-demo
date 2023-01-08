@@ -3,6 +3,7 @@
 use crate::{
     core::item::item_repository,
     infra::state::AppState,
+    integration::mq::MqPool,
     rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
 };
@@ -82,11 +83,7 @@ async fn index() -> Html<&'static str> {
 }
 
 /// Starts the axum server.
-pub async fn axum_server(
-    addr: TcpListener,
-    db: PgPool,
-    mq: lapin::Connection,
-) -> Result<(), hyper::Error> {
+pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<(), hyper::Error> {
     let state = AppState::new(db.clone(), mq);
     let app = Router::new()
         .route("/", axum::routing::get(index))
@@ -148,7 +145,7 @@ mod tests {
         let listener = TcpListener::bind(format!("{}:0", address)).unwrap();
         let port = listener.local_addr().unwrap().port();
         let config = crate::infra::config::load_config().unwrap();
-        let conn = crate::integration::mq::connect(&config.mq).await;
+        let conn = crate::integration::mq::init_mq(&config.mq).await.unwrap();
         tokio::spawn(axum_server(listener, db, conn));
         format!("http://{}:{}/api", address, port)
     }
