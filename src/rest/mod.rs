@@ -7,9 +7,9 @@ use crate::{
     rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
 };
-use axum::{response::Html, routing::get, Router, Json};
+use axum::{response::Html, routing::get, Json, Router};
 use hyper::header::AUTHORIZATION;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
 use tower::ServiceBuilder;
