@@ -18,6 +18,25 @@ jobs:
       - name: Checkout the repo
         uses: actions/checkout@v3
 
+      - name: Cache cargo-bump
+        uses: actions/cache@v3
+        id: cache-cargo-bump
+        with:
+          path: |
+            ~/.cargo/bin/cargo-bump
+          key: ${{ runner.os }}-cargo-bump-${{ env.CARGO_BUMP_VERSION }}-${{ env.CARGO_BUMP_VERSION }}
+
+      - name: Install cargo-bump
+        uses: actions-rs/cargo@v1
+        if: steps.cache-cargo-bump.outputs.cache-hit == false
+        with:
+          command: install
+          args: >
+            cargo-bump
+            --force
+            --version=${{ env.CARGO_BUMP_VERSION }}
+            --locked
+
       - name: Run cargo bump
         uses: actions-rs/cargo@v1
         with:
