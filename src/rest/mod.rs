@@ -7,8 +7,9 @@ use crate::{
     rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
 };
-use axum::{response::Html, Router};
+use axum::{response::Html, routing::get, Router, Json};
 use hyper::header::AUTHORIZATION;
+use serde::{Serialize, Deserialize};
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
 use tower::ServiceBuilder;
@@ -20,7 +21,7 @@ use tower_http::{
 use tracing::Level;
 use utoipa::{
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
-    Modify, OpenApi,
+    Modify, OpenApi, ToSchema,
 };
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -34,6 +35,7 @@ pub mod user_api;
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        info,
         greeting_api::greet,
         item_api::create_item,
         item_api::list_items,
@@ -46,6 +48,7 @@ pub mod user_api;
     ),
     components(
         schemas(
+            AppInfo,
             greeting_api::Greeting,
             item_repository::NewItem,
             item_repository::Item,
@@ -82,6 +85,30 @@ async fn index() -> Html<&'static str> {
     )
 }
 
+/// Application information.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, ToSchema)]
+pub struct AppInfo {
+    // The application name.
+    name: &'static str,
+    // The application version.
+    version: &'static str,
+}
+
+/// Returns application information.
+#[utoipa::path(
+    get,
+    path = "/api/info",
+    responses(
+        (status = 200, description = "Success", body = AppInfo),
+    )
+)]
+pub async fn info() -> Json<AppInfo> {
+    Json(AppInfo {
+        name: env!("CARGO_PKG_NAME"),
+        version: env!("CARGO_PKG_VERSION"),
+    })
+}
+
 /// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<(), hyper::Error> {
     let state = AppState::new(db.clone(), mq);
@@ -93,6 +120,7 @@ pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<()
         .nest(
             "/api",
             Router::<AppState>::new()
+                .route("/info", get(info))
                 .merge(greeting_api::greeting_routes())
                 .merge(item_api::item_routes())
                 .merge(user_api::user_routes())
