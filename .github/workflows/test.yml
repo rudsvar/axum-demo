@@ -101,9 +101,3 @@ jobs:
           command: test
 
       - uses: stefanzweifel/git-auto-commit-action@v4
-
-      - name: Run cargo bump
-        uses: actions-rs/cargo@v1
-        with:
-          command: bump
-          args: --git-tag
