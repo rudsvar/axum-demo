@@ -7,6 +7,7 @@ use axum::{http::HeaderValue, response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
+use tonic::Status;
 use utoipa::ToSchema;
 
 /// A standard error response body.
@@ -75,15 +76,15 @@ impl From<sqlx::Error> for ApiError {
     }
 }
 
-impl From<axum_sqlx_tx::Error> for ApiError {
-    fn from(e: axum_sqlx_tx::Error) -> Self {
-        ApiError::InternalError(InternalError::AxumSqlxTxError(e))
-    }
-}
-
 impl From<bcrypt::BcryptError> for ApiError {
     fn from(e: bcrypt::BcryptError) -> Self {
         ApiError::InternalError(InternalError::BcryptError(e))
+    }
+}
+
+impl From<deadpool_lapin::PoolError> for ApiError {
+    fn from(e: deadpool_lapin::PoolError) -> Self {
+        ApiError::InternalError(InternalError::LapinPoolError(e))
     }
 }
 
@@ -129,9 +130,6 @@ pub enum InternalError {
     /// An [`sqlx`] error.
     #[error("{0}")]
     SqlxError(#[from] sqlx::Error),
-    /// An [`axum_sqlx_tx`] error.
-    #[error("{0}")]
-    AxumSqlxTxError(#[from] axum_sqlx_tx::Error),
     /// An axum extension was not set.
     #[error("missing extension: {0}")]
     MissingExtension(String),
@@ -144,6 +142,15 @@ pub enum InternalError {
     /// Integration error.
     #[error("integration error: {0}")]
     IntegrationError(String),
+    /// Lapin error.
+    #[error("lapin error: {0}")]
+    LapinError(#[from] lapin::Error),
+    /// Lapin pool error.
+    #[error("lapin error: {0}")]
+    LapinPoolError(#[from] deadpool_lapin::PoolError),
+    /// Serde json error.
+    #[error("serde json error: {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
     /// Other miscellaneous errors.
     #[error("{0}")]
     Other(String),
@@ -153,7 +160,6 @@ impl IntoResponse for InternalError {
     fn into_response(self) -> axum::response::Response {
         let status = match self {
             Self::SqlxError(_) => StatusCode::BAD_GATEWAY,
-            Self::AxumSqlxTxError(_) => StatusCode::BAD_GATEWAY,
             Self::IntegrationError(_) => StatusCode::BAD_GATEWAY,
             Self::ReqwestError(e) if e.is_timeout() => StatusCode::GATEWAY_TIMEOUT,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
@@ -164,5 +170,23 @@ impl IntoResponse for InternalError {
             .headers_mut()
             .insert("Retry-After", HeaderValue::from_static("5"));
         response
+    }
+}
+
+impl From<ApiError> for Status {
+    fn from(e: ApiError) -> Self {
+        match e {
+            ApiError::ClientError(e) => match e {
+                ClientError::BadRequest(message) => Status::invalid_argument(message),
+                ClientError::Unauthorized => Status::unauthenticated("unauthenticated"),
+                ClientError::Forbidden => Status::permission_denied("permission denied"),
+                ClientError::NotFound => Status::not_found("resource not found"),
+                ClientError::Conflict => Status::already_exists("resource already exists"),
+            },
+            ApiError::InternalError(e) => {
+                tracing::error!("request failed: {}", e);
+                Status::internal("internal error")
+            }
+        }
     }
 }

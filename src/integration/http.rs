@@ -1,32 +1,36 @@
 //! Utilities for performing integration calls over HTTP.
 //!
-//! Examples include [`LogClient`] and [`log_client`] for creating
+//! Examples include [`LogClient`] and [`logging_client`] for creating
 //! HTTP clients that automatically log requests.
 
 use reqwest::{Client, Request, Response};
 use std::{future::Future, pin::Pin, time::Duration};
-use tower::{Service, ServiceBuilder};
+use tower::{Service, ServiceBuilder, ServiceExt};
 
 use crate::{
+    core::request::request_repository::{self, NewRequest},
     infra::{
         database::DbPool,
-        error::{ApiError, InternalError},
+        error::{ApiError, ApiResult, InternalError},
     },
-    repository::request_repository::NewRequest,
 };
 
 /// A HTTP client wrapper for pre- and post-processing requests.
-#[derive(Debug)]
-pub struct LogClient(Client, DbPool);
+#[derive(Clone, Debug)]
+pub struct HttpClient(Client, DbPool);
 
-impl LogClient {
+impl HttpClient {
     /// Wraps a client.
     pub fn new(client: Client, db: DbPool) -> Self {
         Self(client, db)
     }
+    /// Send a logged HTTP request.
+    pub async fn send(&mut self, request: reqwest::Request) -> ApiResult<reqwest::Response> {
+        self.ready().await?.call(request).await
+    }
 }
 
-impl Service<Request> for LogClient {
+impl Service<Request> for HttpClient {
     type Response = Response;
     type Error = ApiError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
@@ -77,8 +81,7 @@ impl Service<Request> for LogClient {
                 response_body: String::from_utf8(bytes.to_vec()).ok(),
                 status: status.as_u16() as i32,
             };
-            let stored_req =
-                crate::repository::request_repository::create_request(&mut tx, new_req).await?;
+            let stored_req = request_repository::log_request(&mut tx, new_req).await?;
             tx.commit().await?;
             // Check if ok
             if status.is_success() {
@@ -106,24 +109,24 @@ impl Service<Request> for LogClient {
 }
 
 /// A preconfigured HTTP client.
-pub fn logging_client(
+pub fn http_client(
     db: DbPool,
 ) -> impl Service<
     Request,
     Response = Response,
     Error = ApiError,
-    Future = <LogClient as Service<Request>>::Future,
+    Future = <HttpClient as Service<Request>>::Future,
 > {
     let client = reqwest::Client::new();
     ServiceBuilder::new()
         .rate_limit(1, Duration::from_secs(1))
-        .layer_fn(|c| LogClient::new(c, db.clone()))
+        .layer_fn(|c| HttpClient::new(c, db.clone()))
         .service(client)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::logging_client;
+    use super::http_client;
     use http::StatusCode;
     use serde::Deserialize;
     use sqlx::PgPool;
@@ -139,7 +142,7 @@ mod tests {
     #[ignore = "Does an integration call"]
     async fn log_client_logs(db: PgPool) {
         tracing_subscriber::fmt().init();
-        let mut client = logging_client(db);
+        let mut client = http_client(db);
 
         let req = reqwest::Client::new()
             .get("https://dummyjson.com/products/1")

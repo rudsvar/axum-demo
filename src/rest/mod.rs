@@ -1,13 +1,15 @@
 //! REST API implementations.
 
 use crate::{
-    api::rest::middleware::{print_request_response, MakeRequestIdSpan},
-    infra::error::ApiError,
-    repository::item_repository,
+    core::item::item_repository,
+    infra::state::AppState,
+    integration::mq::MqPool,
+    rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
 };
-use axum::{response::Html, Extension, Router};
+use axum::{response::Html, routing::get, Json, Router};
 use hyper::header::AUTHORIZATION;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
 use tower::ServiceBuilder;
@@ -19,11 +21,11 @@ use tower_http::{
 use tracing::Level;
 use utoipa::{
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
-    Modify, OpenApi,
+    Modify, OpenApi, ToSchema,
 };
 use utoipa_swagger_ui::SwaggerUi;
 
-pub mod hello_api;
+pub mod greeting_api;
 pub mod integration_api;
 pub mod item_api;
 pub mod middleware;
@@ -33,19 +35,26 @@ pub mod user_api;
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        hello_api::hello,
+        info,
+        greeting_api::greet,
         item_api::create_item,
         item_api::list_items,
+        item_api::stream_items,
         user_api::user,
         user_api::admin,
-        integration_api::remote_items
+        integration_api::remote_items,
+        integration_api::post_to_mq,
+        integration_api::read_from_mq,
     ),
     components(
         schemas(
-            hello_api::Greeting,
+            AppInfo,
+            greeting_api::Greeting,
             item_repository::NewItem,
             item_repository::Item,
-            crate::infra::error::ErrorBody)
+            integration_api::Message,
+            crate::infra::error::ErrorBody
+        )
     ),
     modifiers(&SecurityAddon)
 )]
@@ -76,27 +85,52 @@ async fn index() -> Html<&'static str> {
     )
 }
 
+/// Application information.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, ToSchema)]
+pub struct AppInfo {
+    // The application name.
+    name: &'static str,
+    // The application version.
+    version: &'static str,
+}
+
+/// Returns application information.
+#[utoipa::path(
+    get,
+    path = "/api/info",
+    responses(
+        (status = 200, description = "Success", body = AppInfo),
+    )
+)]
+pub async fn info() -> Json<AppInfo> {
+    Json(AppInfo {
+        name: env!("CARGO_PKG_NAME"),
+        version: env!("CARGO_PKG_VERSION"),
+    })
+}
+
 /// Starts the axum server.
-pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Error> {
+pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<(), hyper::Error> {
+    let state = AppState::new(db.clone(), mq);
     let app = Router::new()
         .route("/", axum::routing::get(index))
         // Swagger ui
-        .merge(SwaggerUi::new("/swagger-ui/*tail").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         // API
         .nest(
             "/api",
-            Router::new()
-                .merge(hello_api::hello_routes())
+            Router::<AppState>::new()
+                .route("/info", get(info))
+                .merge(greeting_api::greeting_routes())
                 .merge(item_api::item_routes())
                 .merge(user_api::user_routes())
                 .merge(integration_api::integration_routes()),
         )
         // Layers
-        .layer(axum_sqlx_tx::Layer::new_with_error::<ApiError>(db.clone()))
-        .layer(Extension(db.clone()))
         .layer(axum::middleware::from_fn(move |req, next| {
-            print_request_response(req, next, db.clone())
+            log_request_response(req, next, db.clone())
         }))
+        .with_state(state)
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(
             TraceLayer::new_for_http()
@@ -128,8 +162,8 @@ pub async fn axum_server(addr: TcpListener, db: PgPool) -> Result<(), hyper::Err
 #[cfg(test)]
 mod tests {
     use crate::{
-        api::rest::{axum_server, hello_api::Greeting},
         infra::{database::DbPool, error::ErrorBody},
+        rest::{axum_server, greeting_api::Greeting},
     };
     use serde::Deserialize;
     use std::net::TcpListener;
@@ -138,7 +172,9 @@ mod tests {
         let address = "127.0.0.1";
         let listener = TcpListener::bind(format!("{}:0", address)).unwrap();
         let port = listener.local_addr().unwrap().port();
-        tokio::spawn(axum_server(listener, db));
+        let config = crate::infra::config::load_config().unwrap();
+        let conn = crate::integration::mq::init_mq(&config.mq).await.unwrap();
+        tokio::spawn(axum_server(listener, db, conn));
         format!("http://{}:{}/api", address, port)
     }
 

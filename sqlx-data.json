@@ -32,6 +32,36 @@
     },
     "query": "\n        SELECT id, password, role FROM users\n        WHERE username = $1\n        "
   },
+  "467dcd7fd379750cbf30a190d06dc1b3e61b1bd7ef288fbf6fbedec52c276434": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "description",
+          "ordinal": 2,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": []
+      }
+    },
+    "query": "SELECT * FROM items"
+  },
   "5a60991465690584b3d674778a542d040e398dc211bcb2cf8a65a7ce9d654c02": {
     "describe": {
       "columns": [

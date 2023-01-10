@@ -20,6 +20,10 @@ jobs:
           POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
+      rabbitmq:
+        image: rabbitmq:3.11.5
+        ports:
+          - 5672:5672
     env:
       SQLX_VERSION: 0.6.2
       CARGO_BUMP_VERSION: 1.1.0
@@ -90,11 +94,6 @@ jobs:
         with:
           command: fmt
           args: --all
-
-      - name: Run cargo bump
-        uses: actions-rs/cargo@v1
-        with:
-          command: bump
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1

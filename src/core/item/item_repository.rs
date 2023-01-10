@@ -1,7 +1,13 @@
 //! Types and functions for storing and loading items from the database.
 
-use crate::infra::{database::Tx, error::ApiResult};
+use crate::infra::{
+    database::{DbConnection, Tx},
+    error::ApiResult,
+};
+use async_stream::try_stream;
+use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tracing::{instrument, Instrument};
 use utoipa::ToSchema;
 
@@ -62,14 +68,33 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
     .fetch_all(tx)
     .instrument(tracing::info_span!("fetch_all"))
     .await?;
-    tracing::info!("Got items {:?}", items);
+    tracing::info!("Listed {} items", items.len());
     Ok(items)
+}
+
+/// Streams all items.
+#[instrument(skip(conn))]
+pub fn stream_items(
+    mut conn: DbConnection,
+    throttle: Duration,
+) -> impl Stream<Item = ApiResult<Item>> {
+    tracing::info!("Streaming items");
+    let items = try_stream! {
+        let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#).fetch(&mut conn);
+        let mut total = 0;
+        while let Some(item) = items.next().await {
+            yield item?;
+            total += 1;
+            tokio::time::sleep(throttle).await;
+        }
+        tracing::info!("Streamed {} items", total);
+    };
+    Box::pin(items)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{create_item, list_items, Item};
-    use crate::repository::item_repository::NewItem;
+    use super::*;
     use sqlx::PgPool;
 
     #[sqlx::test]

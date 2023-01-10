@@ -45,8 +45,8 @@ pub struct Request {
 
 /// Creates a new item.
 #[instrument(skip(tx, new_req))]
-pub async fn create_request(tx: &mut Tx, new_req: NewRequest) -> ApiResult<Request> {
-    tracing::trace!("Creating request {:?}", new_req);
+pub async fn log_request(tx: &mut Tx, new_req: NewRequest) -> ApiResult<Request> {
+    tracing::trace!("Logging request");
     let req = sqlx::query_as!(
         Request,
         r#"
@@ -63,7 +63,7 @@ pub async fn create_request(tx: &mut Tx, new_req: NewRequest) -> ApiResult<Reque
     )
     .fetch_one(tx)
     .await?;
-    tracing::trace!("Created req {:?}", req);
+    tracing::trace!("Logged request");
     Ok(req)
 }
 
@@ -76,7 +76,7 @@ mod tests {
     async fn create_works(db: PgPool) {
         tracing_subscriber::fmt().init();
         let mut tx = db.begin().await.unwrap();
-        let req = create_request(
+        let req = log_request(
             &mut tx,
             NewRequest {
                 host: "self".to_string(),
