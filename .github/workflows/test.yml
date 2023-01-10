@@ -95,15 +95,15 @@ jobs:
           command: fmt
           args: --all
 
-      - name: Run cargo bump
-        uses: actions-rs/cargo@v1
-        with:
-          command: bump
-          args: --git-tag
-
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
 
       - uses: stefanzweifel/git-auto-commit-action@v4
+
+      - name: Run cargo bump
+        uses: actions-rs/cargo@v1
+        with:
+          command: bump
+          args: --git-tag
