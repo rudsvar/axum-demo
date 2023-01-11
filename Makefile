@@ -30,7 +30,7 @@ sqlx-prepare:
 	cargo sqlx prepare -- --lib
 
 sqlx-verify:
-	cargo sqlx prepare -- --lib
+	cargo sqlx prepare --check -- --lib
 
 sqlx-migrate:
 	sqlx migrate run
