@@ -64,21 +64,19 @@ jobs:
             --no-default-features
             --locked
 
-      - name: Set up database
-        run: sqlx database setup
-
-      - name: Update sqlx-data.json
-        run: cargo sqlx prepare
-
-      - name: Run cargo fmt
+      - name: Check fmt
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all
+          args: --check
+
+      - name: Set up database
+        run: sqlx database setup
+
+      - name: Check sqlx-data.json
+        run: cargo sqlx prepare --check -- --lib
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
-
-      - uses: stefanzweifel/git-auto-commit-action@v4
