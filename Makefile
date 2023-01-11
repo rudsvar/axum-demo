@@ -37,3 +37,8 @@ sqlx-migrate:
 
 sqlx-reset:
 	sqlx database reset
+
+TYPE=patch
+
+bump:
+	cargo bump ${TYPE} --git-tag
