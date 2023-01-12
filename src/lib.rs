@@ -27,6 +27,7 @@ pub mod grpc;
 pub mod infra;
 pub mod integration;
 pub mod rest;
+pub mod graphql;
 
 /// Completes when when ctrl-c is pressed.
 pub(crate) async fn shutdown(name: &str) {
