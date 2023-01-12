@@ -191,5 +191,37 @@
       }
     },
     "query": "\n        INSERT INTO requests (host, method, uri, request_body, response_body, status)\n        VALUES ($1, $2, $3, $4, $5, $6)\n        RETURNING *\n        "
+  },
+  "d50ab4ebc40c4bd4249a6302a93b8b9c6da518f8a6ce374c6ff5e519d30ff485": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "description",
+          "ordinal": 2,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n        SELECT * FROM items\n        WHERE id = $1\n        "
   }
 }
