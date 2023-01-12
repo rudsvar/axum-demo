@@ -18,6 +18,13 @@ pub async fn create_item(tx: &mut Tx, new_item: NewItem) -> ApiResult<Item> {
     Ok(item)
 }
 
+/// Read an item.
+#[instrument(skip(tx))]
+pub async fn read_item(tx: &mut Tx, id: i32) -> ApiResult<Option<Item>> {
+    let item = item_repository::fetch_item(tx, id).await?;
+    Ok(item)
+}
+
 /// Lists all items.
 #[instrument(skip(tx))]
 pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {

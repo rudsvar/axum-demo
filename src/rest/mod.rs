@@ -2,14 +2,19 @@
 
 use crate::{
     core::item::item_repository,
+    graphql::{graphql_item_api::QueryRoot, GraphQlData, GraphQlSchema},
     infra::state::AppState,
     integration::mq::MqPool,
     rest::middleware::{log_request_response, MakeRequestIdSpan},
-    shutdown, graphql::{StarWarsSchema, starwars::QueryRoot, StarWars},
+    shutdown,
 };
-use async_graphql::{Schema, EmptyMutation, EmptySubscription, http::GraphiQLSource};
+use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::{response::{Html, IntoResponse}, routing::get, Json, Router, Extension};
+use axum::{
+    response::{Html, IntoResponse},
+    routing::get,
+    Extension, Json, Router,
+};
 use hyper::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -77,7 +82,7 @@ impl Modify for SecurityAddon {
 }
 
 async fn index() -> Html<&'static str> {
-    axum::response::Html(
+    Html(
         r#"
             <h1>Axum demo</h1>
             <ul>
@@ -87,15 +92,17 @@ async fn index() -> Html<&'static str> {
     )
 }
 
-async fn graphql_handler(
-    schema: Extension<StarWarsSchema>,
+/// A handler for GraphQL requests.
+pub async fn graphql_handler(
+    schema: Extension<GraphQlSchema>,
     req: GraphQLRequest,
 ) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
 }
 
-async fn graphiql() -> impl IntoResponse {
-    axum::response::Html(GraphiQLSource::build().endpoint("/graphql").finish())
+/// A handler for the GraphQL IDE.
+pub async fn graphiql() -> impl IntoResponse {
+    Html(GraphiQLSource::build().endpoint("/graphql").finish())
 }
 
 /// Application information.
@@ -124,9 +131,9 @@ pub async fn info() -> Json<AppInfo> {
 
 /// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<(), hyper::Error> {
-    // GraphQL schema
+    // The GraphQL schema
     let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
-        .data(StarWars::new())
+        .data(GraphQlData::new(db.clone()))
         .finish();
 
     let state = AppState::new(db.clone(), mq);

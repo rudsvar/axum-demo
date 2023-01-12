@@ -55,6 +55,25 @@ pub async fn create_item(tx: &mut Tx, new_item: NewItem) -> ApiResult<Item> {
     Ok(item)
 }
 
+/// Read an item.
+#[instrument(skip(tx))]
+pub async fn fetch_item(tx: &mut Tx, id: i32) -> ApiResult<Option<Item>> {
+    tracing::info!("Reading item");
+    let item = sqlx::query_as!(
+        Item,
+        r#"
+        SELECT * FROM items
+        WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_optional(tx)
+    .instrument(tracing::info_span!("fetch_optional"))
+    .await?;
+    tracing::info!("Found item: {:?}", item);
+    Ok(item)
+}
+
 /// Lists all items.
 #[instrument(skip(tx))]
 pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
