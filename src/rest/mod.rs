@@ -86,7 +86,8 @@ async fn index() -> Html<&'static str> {
         r#"
             <h1>Axum demo</h1>
             <ul>
-                <li> <a href="/swagger-ui/">Swagger UI</a> </li>
+                <li> <a href="/swagger-ui">Swagger UI</a> </li>
+                <li> <a href="/graphiql">GraphiQL IDE</a> </li>
             </ul>
         "#,
     )
@@ -102,7 +103,7 @@ pub async fn graphql_handler(
 
 /// A handler for the GraphQL IDE.
 pub async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/graphql").finish())
+    Html(GraphiQLSource::build().endpoint("/graphiql").finish())
 }
 
 /// Application information.
@@ -140,7 +141,7 @@ pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<()
     let app = Router::new()
         .route("/", axum::routing::get(index))
         // GraphQL
-        .route("/graphql", get(graphiql).post(graphql_handler))
+        .route("/graphiql", get(graphiql).post(graphql_handler))
         .layer(Extension(schema))
         // Swagger ui
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
