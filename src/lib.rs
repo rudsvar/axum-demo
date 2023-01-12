@@ -23,11 +23,11 @@
 //! and the gRPC contracts can be found in the `./proto`-folder.
 
 pub mod core;
+pub mod graphql;
 pub mod grpc;
 pub mod infra;
 pub mod integration;
 pub mod rest;
-pub mod graphql;
 
 /// Completes when when ctrl-c is pressed.
 pub(crate) async fn shutdown(name: &str) {
