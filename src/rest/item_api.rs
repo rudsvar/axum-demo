@@ -93,7 +93,6 @@ pub struct StreamOptions {
 pub async fn stream_items<'a>(
     State(db): State<DbPool>,
     Query(stream_options): Query<StreamOptions>,
-    user: User<Admin>,
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {
     let conn = db.acquire().await?;
     let throttle = Duration::from_millis(stream_options.throttle.unwrap_or(0));
