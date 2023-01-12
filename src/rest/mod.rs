@@ -5,9 +5,11 @@ use crate::{
     infra::state::AppState,
     integration::mq::MqPool,
     rest::middleware::{log_request_response, MakeRequestIdSpan},
-    shutdown,
+    shutdown, graphql::{StarWarsSchema, starwars::QueryRoot, StarWars},
 };
-use axum::{response::Html, routing::get, Json, Router};
+use async_graphql::{Schema, EmptyMutation, EmptySubscription, http::GraphiQLSource};
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use axum::{response::{Html, IntoResponse}, routing::get, Json, Router, Extension};
 use hyper::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -85,6 +87,17 @@ async fn index() -> Html<&'static str> {
     )
 }
 
+async fn graphql_handler(
+    schema: Extension<StarWarsSchema>,
+    req: GraphQLRequest,
+) -> GraphQLResponse {
+    schema.execute(req.into_inner()).await.into()
+}
+
+async fn graphiql() -> impl IntoResponse {
+    axum::response::Html(GraphiQLSource::build().endpoint("/graphql").finish())
+}
+
 /// Application information.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, ToSchema)]
 pub struct AppInfo {
@@ -111,9 +124,17 @@ pub async fn info() -> Json<AppInfo> {
 
 /// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<(), hyper::Error> {
+    // GraphQL schema
+    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
+        .data(StarWars::new())
+        .finish();
+
     let state = AppState::new(db.clone(), mq);
     let app = Router::new()
         .route("/", axum::routing::get(index))
+        // GraphQL
+        .route("/graphql", get(graphiql).post(graphql_handler))
+        .layer(Extension(schema))
         // Swagger ui
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         // API
