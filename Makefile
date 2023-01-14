@@ -22,6 +22,12 @@ doc:
 doc-open:
 	cargo doc --open
 
+copy-doc:
+	rm -rf doc
+	mkdir doc
+	cargo doc --no-deps
+	cp -r target/doc/* doc/
+
 bench:
 	# https://crates.io/crates/cargo-criterion
 	cargo criterion

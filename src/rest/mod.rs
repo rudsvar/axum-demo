@@ -1,4 +1,4 @@
-//! REST API implementations.
+//! REST API implementation.
 
 use crate::{
     core::item::item_repository,
@@ -15,6 +15,7 @@ use axum::{
     routing::get,
     Extension, Json, Router,
 };
+use axum_extra::routing::SpaRouter;
 use hyper::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -86,6 +87,7 @@ async fn index() -> Html<&'static str> {
         r#"
             <h1>Axum demo</h1>
             <ul>
+                <li> <a href="/docs/axum_demo/index.html">Crate documentation</a> </li>
                 <li> <a href="/swagger-ui">Swagger UI</a> </li>
                 <li> <a href="/graphiql">GraphiQL IDE</a> </li>
             </ul>
@@ -140,6 +142,8 @@ pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<()
     let state = AppState::new(db.clone(), mq);
     let app = Router::new()
         .route("/", axum::routing::get(index))
+        // Docs
+        .merge(SpaRouter::new("/doc", "doc").index_file("axum_demo/index.html"))
         // GraphQL
         .route("/graphiql", get(graphiql).post(graphql_handler))
         .layer(Extension(schema))

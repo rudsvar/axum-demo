@@ -1,4 +1,4 @@
-//! gRPC API implementations.
+//! gRPC API implementation.
 
 use crate::{
     grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},

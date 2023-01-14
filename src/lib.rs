@@ -18,9 +18,7 @@
 //! ```
 //!
 //! You can install `sqlx` with `cargo install sqlx-cli`.
-//!
-//! The REST API can be seen at `http://localhost:8080/swagger-ui/index.html`,
-//! and the gRPC contracts can be found in the `./proto`-folder.
+//! When the application is up and running, visit `localhost:8080`.
 
 pub mod core;
 pub mod graphql;

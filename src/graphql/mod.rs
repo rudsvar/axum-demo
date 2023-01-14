@@ -1,4 +1,4 @@
-//! GraphQL API.
+//! GraphQL API implementation.
 
 use self::graphql_item_api::QueryRoot;
 use crate::infra::database::DbPool;

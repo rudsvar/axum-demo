@@ -19,7 +19,7 @@ pub(super) mod item {
     tonic::include_proto!("item");
 }
 
-/// An struct that should implement [`ItemService`].
+/// The implementation of the item service.
 #[derive(Clone, Debug)]
 pub struct ItemServiceImpl {
     db: DbPool,
