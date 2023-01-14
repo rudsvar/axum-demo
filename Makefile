@@ -26,7 +26,10 @@ copy-doc:
 	rm -rf doc
 	mkdir doc
 	cargo doc --no-deps
-	cp -r target/doc/* doc/
+	cp -r target/doc doc
+
+README.md: src/lib.rs
+	cargo readme > $@
 
 bench:
 	# https://crates.io/crates/cargo-criterion
