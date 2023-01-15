@@ -1,5 +1,5 @@
 [server]
-address = "0.0.0.0"
+http_address = "0.0.0.0"
 http_port = 8080
 grpc_address = "0.0.0.0"
 grpc_port = 3009

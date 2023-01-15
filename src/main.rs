@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
     // Start servers
     let listener = TcpListener::bind(format!(
         "{}:{}",
-        config.server.address, config.server.http_port
+        config.server.http_address, config.server.http_port
     ))?;
     let axum_server = tokio::spawn(rest::axum_server(listener, db.clone(), mq));
     let grpc_addr = format!("{}:{}", config.server.grpc_address, config.server.grpc_port);

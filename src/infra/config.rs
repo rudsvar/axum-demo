@@ -2,22 +2,22 @@
 
 use serde::Deserialize;
 
-/// Application settings.
+/// Application configuration.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    /// Server settings.
+    /// Server configuration.
     pub server: ServerConfig,
-    /// Database settings.
+    /// Database configuration.
     pub database: DatabaseConfig,
-    /// Message queue settings.
+    /// Message queue configuration.
     pub mq: MqConfig,
 }
 
-/// Server settings.
+/// Server configuration.
 #[derive(Clone, Debug, Deserialize)]
 pub struct ServerConfig {
     /// Server address.
-    pub address: String,
+    pub http_address: String,
     /// Server http port.
     pub http_port: u16,
     /// Server http port.
@@ -26,7 +26,7 @@ pub struct ServerConfig {
     pub grpc_port: u16,
 }
 
-/// Database settings.
+/// Database configuration.
 #[derive(Clone, Debug, Deserialize)]
 pub struct DatabaseConfig {
     /// The database username.
@@ -35,23 +35,23 @@ pub struct DatabaseConfig {
     pub password: String,
     /// The database port.
     pub port: u16,
-    /// The database host.
-    pub host: String,
     /// The database name.
     pub database_name: String,
-}
-
-/// Database settings.
-#[derive(Clone, Debug, Deserialize)]
-pub struct MqConfig {
-    /// The database username.
-    pub username: String,
-    /// The database password.
-    pub password: String,
-    /// The database port.
-    pub port: u16,
     /// The database host.
     pub host: String,
+}
+
+/// Message queue configuration.
+#[derive(Clone, Debug, Deserialize)]
+pub struct MqConfig {
+    /// The message queue username.
+    pub username: String,
+    /// The message queue password.
+    pub password: String,
+    /// The message queue host.
+    pub host: String,
+    /// The message queue port.
+    pub port: u16,
 }
 
 impl MqConfig {
@@ -67,10 +67,10 @@ impl MqConfig {
 /// Retrieve [`Config`] from the default configuration file.
 #[tracing::instrument]
 pub fn load_config() -> anyhow::Result<Config> {
-    let settings = config::Config::builder()
+    let config = config::Config::builder()
         .add_source(config::File::with_name("config"))
         .add_source(config::Environment::with_prefix("app").separator("__"))
         .build()?
         .try_deserialize()?;
-    Ok(settings)
+    Ok(config)
 }
