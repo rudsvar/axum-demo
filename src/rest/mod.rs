@@ -87,7 +87,7 @@ async fn index() -> Html<&'static str> {
         r#"
             <h1>Axum demo</h1>
             <ul>
-                <li> <a href="/docs/axum_demo/index.html">Crate documentation</a> </li>
+                <li> <a href="/doc/axum_demo/index.html">Crate documentation</a> </li>
                 <li> <a href="/swagger-ui">Swagger UI</a> </li>
                 <li> <a href="/graphiql">GraphiQL IDE</a> </li>
             </ul>
