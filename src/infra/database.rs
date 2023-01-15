@@ -16,7 +16,7 @@ pub type Tx = sqlx::Transaction<'static, Postgres>;
 /// A common database pool type.
 pub type DbPool = PgPool;
 
-/// A common database pool type.
+/// A common database connection type.
 pub type DbConnection = PoolConnection<Postgres>;
 
 /// Connects to the database based on some configuration.
