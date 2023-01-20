@@ -19,6 +19,7 @@ tower-http = { version = "0.3.4", features = [
     "sensitive-headers",
     "set-header",
     "compression-gzip",
+    "limit",
     "catch-panic"
 ] }
 http = "0.2.8"

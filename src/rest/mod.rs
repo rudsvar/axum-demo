@@ -198,18 +198,17 @@ pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<()
 
     // Create tower service
     let service = ServiceBuilder::new()
-        .rate_limit(200, Duration::from_secs(1))
+        .rate_limit(100, Duration::from_secs(100))
         .concurrency_limit(100)
         .timeout(Duration::from_secs(10))
         .service(app);
 
     tracing::info!("Starting axum on {:?}", addr.local_addr());
 
-    // Start hyper server
-    let axum_server = hyper::Server::from_tcp(addr)?
+    axum::Server::from_tcp(addr)?
         .serve(service)
-        .with_graceful_shutdown(shutdown("axum"));
-    axum_server.await
+        .with_graceful_shutdown(shutdown("axum"))
+        .await
 }
 
 #[cfg(test)]
