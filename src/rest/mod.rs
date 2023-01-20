@@ -3,7 +3,10 @@
 use crate::{
     core::item::item_repository,
     graphql::{graphql_item_api::QueryRoot, GraphQlData, GraphQlSchema},
-    infra::state::AppState,
+    infra::{
+        error::{ApiError, InternalError},
+        state::AppState,
+    },
     integration::mq::MqPool,
     rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
@@ -22,6 +25,7 @@ use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
 use tower::ServiceBuilder;
 use tower_http::{
+    catch_panic::{CatchPanicLayer, ResponseForPanic},
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
@@ -132,6 +136,21 @@ pub async fn info() -> Json<AppInfo> {
     })
 }
 
+/// A handler for panics.
+#[derive(Clone, Copy)]
+struct PanicHandler;
+
+impl ResponseForPanic for PanicHandler {
+    type ResponseBody = axum::body::BoxBody;
+
+    fn response_for_panic(
+        &mut self,
+        _: Box<dyn std::any::Any + Send + 'static>,
+    ) -> http::Response<Self::ResponseBody> {
+        ApiError::InternalError(InternalError::Other("Panic".to_string())).into_response()
+    }
+}
+
 /// Starts the axum server.
 pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<(), hyper::Error> {
     // The GraphQL schema
@@ -174,6 +193,7 @@ pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<()
         )
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
+        .layer(CatchPanicLayer::custom(PanicHandler))
         .into_make_service();
 
     // Create tower service
