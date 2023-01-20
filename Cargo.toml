@@ -5,11 +5,18 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[profile.release]
+debug = true
+
 [dependencies]
 
 # Web
 axum = { version = "0.6.1", features = ["headers", "macros"] }
-axum-extra = { version = "0.4.2", features = ["typed-routing", "json-lines", "spa"] }
+axum-extra = { version = "0.4.2", features = [
+    "typed-routing",
+    "json-lines",
+    "spa",
+] }
 tower = { version = "0.4.13", features = ["retry"] }
 tower-http = { version = "0.3.4", features = [
     "tracing",
@@ -20,7 +27,7 @@ tower-http = { version = "0.3.4", features = [
     "set-header",
     "compression-gzip",
     "limit",
-    "catch-panic"
+    "catch-panic",
 ] }
 http = "0.2.8"
 hyper = "0.14.23"
@@ -65,7 +72,7 @@ tracing = "0.1.36"
 tracing-subscriber = { version = "0.3.15", default-features = false, features = [
     "env-filter",
     "json",
-    "ansi"
+    "ansi",
 ] }
 tracing-appender = "0.2.2"
 tracing-opentelemetry = { version = "0.18.0", default-features = false }

@@ -2,3 +2,6 @@ target
 logs
 .env
 doc
+flamegraph.svg
+perf.data
+perf.data.old

@@ -51,3 +51,6 @@ TYPE=patch
 
 bump:
 	cargo bump ${TYPE} --git-tag
+
+flamegraph:
+	PERF=/usr/lib/linux-tools/5.4.0-120-generic/perf CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph
