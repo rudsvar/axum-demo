@@ -61,7 +61,6 @@ jobs:
       - uses: fregante/setup-git-user@v1
 
       - name: Commit version change
-        uses: actions-rs/cargo@v1
         run: |
           git add Cargo.toml
           git add Cargo.lock
