@@ -54,7 +54,7 @@ release:
 	cargo generate-lockfile
 	git add Cargo.toml Cargo.lock
 	@NEW_VERSION=$(shell cargo metadata --format-version 1 | jq '.packages[] | select(.name == "axum-demo") | .version' --raw-output); \
-	git commit -m "Release $${NEW_VERSION}"; \
+	git commit -m "Update version to $${NEW_VERSION}"; \
 	git tag -a "$${NEW_VERSION}"
 
 flamegraph:
