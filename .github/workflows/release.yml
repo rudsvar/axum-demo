@@ -8,7 +8,6 @@ env:
   CARGO_TERM_COLOR: always
   REGISTRY: "registry.digitalocean.com/rudsvar"
   IMAGE_NAME: "axum-demo"
-  CARGO_BUMP_VERSION: 1.1.0
 
 jobs:
   release:
@@ -17,55 +16,6 @@ jobs:
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v3
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Cache cargo-bump
-        uses: actions/cache@v3
-        id: cache-cargo-bump
-        with:
-          path: |
-            ~/.cargo/bin/cargo-bump
-          key: ${{ runner.os }}-cargo-bump-${{ env.CARGO_BUMP_VERSION }}
-
-      - name: Install cargo-bump
-        uses: actions-rs/cargo@v1
-        if: steps.cache-cargo-bump.outputs.cache-hit == false
-        with:
-          command: install
-          args: >
-            cargo-bump
-            --force
-            --version=${{ env.CARGO_BUMP_VERSION }}
-            --locked
-
-      - name: Run cargo bump
-        uses: actions-rs/cargo@v1
-        with:
-          command: bump
-          args: ${{ github.event.release.tag_name }}
-
-      - name: Run cargo bump
-        uses: actions-rs/cargo@v1
-        with:
-          command: generate-lockfile
-
-      - uses: fregante/setup-git-user@v1
-
-      - name: Commit version change
-        run: |
-          git add Cargo.toml
-          git add Cargo.lock
-          git commit -m "Bump version"
-          git push
 
       - name: Build container image
         run: docker build . -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
