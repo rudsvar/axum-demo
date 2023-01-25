@@ -51,7 +51,7 @@ TYPE=patch
 
 release:
 	cargo set-version --bump ${TYPE}
-	cargo generate-lockfile
+	cargo test
 	git add Cargo.toml Cargo.lock
 	@TAG=$(shell cargo metadata --format-version 1 | jq '.packages[] | select(.name == "axum-demo") | .version' --raw-output); \
 	git commit -m "Update version to $${TAG}"; \
