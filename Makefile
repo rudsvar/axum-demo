@@ -49,8 +49,10 @@ sqlx-reset:
 
 TYPE=patch
 
-bump:
-	cargo bump ${TYPE} --git-tag
+release:
+	cargo set-version --bump ${TYPE}
+	@NEW_VERSION=$(shell cargo metadata --format-version 1 | jq '.packages[] | select(.name == "axum-demo") | .version' --raw-output); \
+	git tag -a "$${NEW_VERSION}"
 
 flamegraph:
 	PERF=/usr/lib/linux-tools/5.4.0-120-generic/perf CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph
