@@ -47,17 +47,5 @@ sqlx-migrate:
 sqlx-reset:
 	sqlx database reset
 
-TYPE=patch
-
-release:
-	cargo set-version --bump ${TYPE}
-	cargo test
-	git add Cargo.toml Cargo.lock
-	@TAG=$(shell cargo metadata --format-version 1 | jq '.packages[] | select(.name == "axum-demo") | .version' --raw-output); \
-	git commit -m "Update version to $${TAG}"; \
-	git tag -a "v$${TAG}" -m "Release v$${TAG}"; \
-	git push; \
-	git push origin "v$${TAG}"
-
 flamegraph:
 	PERF=/usr/lib/linux-tools/5.4.0-120-generic/perf CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph
