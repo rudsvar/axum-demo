@@ -9,7 +9,7 @@ use axum::{routing::get, Json, Router};
 use tracing::instrument;
 
 /// The user API endpoints.
-pub fn user_routes() -> Router<AppState> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/user", get(user))
         .route("/admin", get(admin))

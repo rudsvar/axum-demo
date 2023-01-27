@@ -1,9 +1,10 @@
 //! For reading application configuration.
 
+use axum::extract::FromRef;
 use serde::Deserialize;
 
 /// Application configuration.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, FromRef)]
 pub struct Config {
     /// Server configuration.
     pub server: ServerConfig,
@@ -11,6 +12,8 @@ pub struct Config {
     pub database: DatabaseConfig,
     /// Message queue configuration.
     pub mq: MqConfig,
+    /// Email configuration.
+    pub email: EmailConfig,
 }
 
 /// Server configuration.
@@ -62,6 +65,17 @@ impl MqConfig {
             self.username, self.password, self.host, self.port
         )
     }
+}
+
+/// Email configuration
+#[derive(Clone, Debug, Deserialize)]
+pub struct EmailConfig {
+    /// The email username.
+    pub username: String,
+    /// The email password.
+    pub password: String,
+    /// The email host.
+    pub host: String,
 }
 
 /// Retrieve [`Config`] from the default configuration file.

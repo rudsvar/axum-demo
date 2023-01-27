@@ -24,7 +24,7 @@ use tracing::instrument;
 use utoipa::ToSchema;
 
 /// Routes for the integrations API.
-pub fn integration_routes() -> Router<AppState> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/remote-items", get(remote_items))
         .route("/mq", post(post_to_mq).get(read_from_mq))

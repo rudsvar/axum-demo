@@ -10,7 +10,7 @@ use tracing::instrument;
 use utoipa::{IntoParams, ToSchema};
 
 /// The hello API endpoints.
-pub fn greeting_routes() -> Router<AppState> {
+pub fn routes() -> Router<AppState> {
     Router::new().route("/hello", get(greet))
 }
 

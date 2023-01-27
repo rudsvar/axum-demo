@@ -26,7 +26,7 @@ use tracing::instrument;
 use utoipa::IntoParams;
 
 /// The item API endpoints.
-pub fn item_routes() -> Router<AppState> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/items", post(create_item))
         .route("/items", get(list_items))

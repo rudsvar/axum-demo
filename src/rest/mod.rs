@@ -4,6 +4,7 @@ use crate::{
     core::item::item_repository,
     graphql::{graphql_item_api::QueryRoot, GraphQlData, GraphQlSchema},
     infra::{
+        config::Config,
         error::{ApiError, InternalError},
         state::AppState,
     },
@@ -37,6 +38,7 @@ use utoipa::{
 };
 use utoipa_swagger_ui::SwaggerUi;
 
+pub mod email_api;
 pub mod greeting_api;
 pub mod integration_api;
 pub mod item_api;
@@ -152,13 +154,18 @@ impl ResponseForPanic for PanicHandler {
 }
 
 /// Starts the axum server.
-pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<(), hyper::Error> {
+pub async fn axum_server(
+    addr: TcpListener,
+    db: PgPool,
+    mq: MqPool,
+    config: Config,
+) -> Result<(), hyper::Error> {
     // The GraphQL schema
     let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
         .data(GraphQlData::new(db.clone()))
         .finish();
 
-    let state = AppState::new(db.clone(), mq);
+    let state = AppState::new(db.clone(), mq, config);
     let app = Router::new()
         .route("/", axum::routing::get(index))
         // Docs
@@ -173,10 +180,11 @@ pub async fn axum_server(addr: TcpListener, db: PgPool, mq: MqPool) -> Result<()
             "/api",
             Router::<AppState>::new()
                 .route("/info", get(info))
-                .merge(greeting_api::greeting_routes())
-                .merge(item_api::item_routes())
-                .merge(user_api::user_routes())
-                .merge(integration_api::integration_routes()),
+                .merge(greeting_api::routes())
+                .merge(item_api::routes())
+                .merge(user_api::routes())
+                .merge(integration_api::routes())
+                .merge(email_api::routes()),
         )
         // Layers
         .layer(axum::middleware::from_fn(move |req, next| {
@@ -226,7 +234,7 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         let config = crate::infra::config::load_config().unwrap();
         let conn = crate::integration::mq::init_mq(&config.mq).await.unwrap();
-        tokio::spawn(axum_server(listener, db, conn));
+        tokio::spawn(axum_server(listener, db, conn, config));
         format!("http://{}:{}/api", address, port)
     }
 
