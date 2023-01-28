@@ -184,7 +184,14 @@ pub async fn axum_server(
                 .merge(item_api::routes())
                 .merge(user_api::routes())
                 .merge(integration_api::routes())
-                .merge(email_api::routes()),
+                .merge(email_api::routes())
+                .layer(
+                    TraceLayer::new_for_http()
+                        .make_span_with(MakeRequestIdSpan)
+                        .on_request(DefaultOnRequest::new().level(Level::INFO))
+                        .on_response(DefaultOnResponse::new().level(Level::INFO))
+                        .on_failure(()),
+                ),
         )
         // Layers
         .layer(axum::middleware::from_fn(move |req, next| {
@@ -192,13 +199,6 @@ pub async fn axum_server(
         }))
         .with_state(state)
         .layer(PropagateRequestIdLayer::x_request_id())
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(MakeRequestIdSpan)
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
-                .on_response(DefaultOnResponse::new().level(Level::INFO))
-                .on_failure(()),
-        )
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
         .layer(CatchPanicLayer::custom(PanicHandler))
