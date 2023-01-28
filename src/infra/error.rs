@@ -3,7 +3,8 @@
 //! If your function interacts with the database or validates user input,
 //! you likely want to return a [`ApiResult`].
 
-use axum::{http::HeaderValue, response::IntoResponse, Json};
+use super::extract::Json;
+use axum::{http::HeaderValue, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -182,7 +183,9 @@ impl From<ApiError> for Status {
         match e {
             ApiError::ClientError(e) => match e {
                 ClientError::BadRequest(message) => Status::invalid_argument(message),
-                ClientError::UnsupportedMediaType => Status::invalid_argument("unsupported media type"),
+                ClientError::UnsupportedMediaType => {
+                    Status::invalid_argument("unsupported media type")
+                }
                 ClientError::Unauthorized => Status::unauthenticated("unauthenticated"),
                 ClientError::Forbidden => Status::permission_denied("permission denied"),
                 ClientError::NotFound => Status::not_found("resource not found"),

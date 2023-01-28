@@ -3,7 +3,10 @@
 use super::AppState;
 use crate::{
     core::item::item_repository::Item,
-    infra::error::{ApiError, ApiResult, InternalError},
+    infra::{
+        error::{ApiError, ApiResult, InternalError},
+        extract::Json,
+    },
     integration::{
         http::http_client,
         mq::{MqClient, MqPool},
@@ -12,7 +15,7 @@ use crate::{
 use axum::{
     extract::State,
     routing::{get, post},
-    Extension, Json, Router,
+    Extension, Router,
 };
 use axum_extra::{json_lines::AsResponse, response::JsonLines};
 use futures::Stream;

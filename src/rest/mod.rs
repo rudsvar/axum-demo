@@ -6,6 +6,7 @@ use crate::{
     infra::{
         config::Config,
         error::{ApiError, InternalError},
+        extract::Json,
         state::AppState,
     },
     integration::mq::MqPool,
@@ -17,7 +18,7 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     response::{Html, IntoResponse},
     routing::get,
-    Extension, Json, Router,
+    Extension, Router,
 };
 use axum_extra::routing::SpaRouter;
 use hyper::header::AUTHORIZATION;

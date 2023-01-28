@@ -3,9 +3,10 @@
 use super::AppState;
 use crate::infra::{
     error::ApiResult,
+    extract::Json,
     security::{Admin, Role, User},
 };
-use axum::{routing::get, Json, Router};
+use axum::{routing::get, Router};
 use tracing::instrument;
 
 /// The user API endpoints.

@@ -1,9 +1,8 @@
 //! Implementation of the greeting API. An API that returns a greeting based on a query parameter.
 
-use crate::core::greeting::greeting_service;
-
+use crate::{core::greeting::greeting_service, infra::extract::Json};
 use super::AppState;
-use axum::{extract::Query, routing::get, Json, Router};
+use axum::{extract::Query, routing::get, Router};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::instrument;

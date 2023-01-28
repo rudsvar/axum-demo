@@ -1,9 +1,9 @@
 //! Custom axum extractors.
 
+use super::error::ErrorBody;
 use axum::{async_trait, body::HttpBody, extract::FromRequest, response::IntoResponse, BoxError};
+use http::StatusCode;
 use serde::{de::DeserializeOwned, Serialize};
-
-use super::error::{ApiError, ClientError};
 
 /// A custom JSON extractor since axum's does not let us customize the response.
 #[derive(Debug, Clone, Copy, Default)]
@@ -24,13 +24,13 @@ where
     B::Error: Into<BoxError>,
     S: Send + Sync,
 {
-    type Rejection = ApiError;
+    type Rejection = (StatusCode, Json<ErrorBody>);
 
     async fn from_request(req: http::Request<B>, state: &S) -> Result<Self, Self::Rejection> {
         let axum::extract::Json(res): axum::extract::Json<T> =
             axum::extract::Json::from_request(req, state)
                 .await
-                .map_err(|e| ClientError::BadRequest(e.to_string()))?;
+                .map_err(|e| (e.status(), Json(ErrorBody::new(e.body_text()))))?;
         Ok(Json(res))
     }
 }
