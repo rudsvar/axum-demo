@@ -11,12 +11,13 @@ use crate::{
     infra::{
         database::DbPool,
         error::{ApiError, ApiResult},
+        extract::Json,
     },
 };
 use axum::{
     extract::{Query, State},
     routing::{get, post},
-    Json, Router,
+    Router,
 };
 use axum_extra::{json_lines::AsResponse, response::JsonLines};
 use futures::Stream;

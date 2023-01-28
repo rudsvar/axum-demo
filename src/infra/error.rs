@@ -95,6 +95,9 @@ pub enum ClientError {
     /// Input validation failed, or some illegal operation was attempted.
     #[error("{0}")]
     BadRequest(String),
+    /// Unsupported media type.
+    #[error("unsupported media type")]
+    UnsupportedMediaType,
     /// Missing or bad credentials.
     #[error("unauthorized")]
     Unauthorized,
@@ -114,6 +117,7 @@ impl IntoResponse for ClientError {
         let msg = self.to_string();
         let status = match self {
             Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::UnsupportedMediaType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
@@ -178,6 +182,7 @@ impl From<ApiError> for Status {
         match e {
             ApiError::ClientError(e) => match e {
                 ClientError::BadRequest(message) => Status::invalid_argument(message),
+                ClientError::UnsupportedMediaType => Status::invalid_argument("unsupported media type"),
                 ClientError::Unauthorized => Status::unauthenticated("unauthenticated"),
                 ClientError::Forbidden => Status::permission_denied("permission denied"),
                 ClientError::NotFound => Status::not_found("resource not found"),
