@@ -10,9 +10,10 @@ use std::{net::TcpListener, time::Duration};
 static MIGRATOR: Migrator = sqlx::migrate!();
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> color_eyre::Result<()> {
     // Load environment variables from .env file
     dotenv::dotenv()?;
+    color_eyre::install()?;
 
     let _guard = infra::logging::init_logging();
     let config = infra::config::load_config()?;

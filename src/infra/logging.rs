@@ -1,6 +1,7 @@
 //! For setting up logging.
 
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 /// Flushes logs upon being dropped.
@@ -37,7 +38,8 @@ pub fn init_logging() -> LogGuard {
     let reg = tracing_subscriber::registry()
         .with(stdout)
         .with(file_appender)
-        .with(opentelemetry);
+        .with(opentelemetry)
+        .with(ErrorLayer::default());
 
     reg.init();
 

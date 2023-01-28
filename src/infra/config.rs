@@ -80,7 +80,7 @@ pub struct EmailConfig {
 
 /// Retrieve [`Config`] from the default configuration file.
 #[tracing::instrument]
-pub fn load_config() -> anyhow::Result<Config> {
+pub fn load_config() -> color_eyre::Result<Config> {
     let config = config::Config::builder()
         .add_source(config::File::with_name("config"))
         .add_source(config::Environment::with_prefix("app").separator("__"))

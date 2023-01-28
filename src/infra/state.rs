@@ -3,7 +3,7 @@
 //! Used for access to common resources such as a
 //! database pool or a preconfigured http client.
 
-use super::{database::DbPool, config::Config};
+use super::{config::Config, database::DbPool};
 use crate::integration::{http::HttpClient, mq::MqPool};
 use axum::extract::FromRef;
 
@@ -13,7 +13,7 @@ pub struct AppState {
     db: DbPool,
     client: HttpClient,
     mq: MqPool,
-    config: Config
+    config: Config,
 }
 
 impl AppState {
@@ -21,7 +21,12 @@ impl AppState {
     pub fn new(db: DbPool, mq: MqPool, config: Config) -> Self {
         let client = reqwest::Client::new();
         let client = HttpClient::new(client, db.clone());
-        Self { db, client, mq, config }
+        Self {
+            db,
+            client,
+            mq,
+            config,
+        }
     }
 
     /// Returns the database pool.
