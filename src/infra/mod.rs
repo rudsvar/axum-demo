@@ -5,7 +5,7 @@
 pub mod config;
 pub mod database;
 pub mod error;
+pub mod extract;
 pub mod logging;
 pub mod security;
 pub mod state;
-pub mod extract;
