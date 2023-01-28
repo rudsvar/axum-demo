@@ -4,12 +4,9 @@ use super::AppState;
 use crate::infra::{
     config::Config,
     error::{ApiResult, ClientError, InternalError},
+    extract::Query,
 };
-use axum::{
-    extract::{Query, State},
-    routing::post,
-    Router,
-};
+use axum::{extract::State, routing::post, Router};
 use lettre::{
     message::Mailbox, transport::smtp::authentication::Credentials, Message, SmtpTransport,
     Transport,
@@ -42,8 +39,8 @@ pub struct EmailParams {
 )]
 #[instrument(skip(config))]
 pub async fn send_email(
-    config: State<Config>,
-    params: Query<EmailParams>,
+    State(config): State<Config>,
+    Query(params): Query<EmailParams>,
     body: String,
 ) -> ApiResult<()> {
     let config = &config.email;

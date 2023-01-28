@@ -1,8 +1,11 @@
 //! Implementation of the greeting API. An API that returns a greeting based on a query parameter.
 
-use crate::{core::greeting::greeting_service, infra::extract::Json};
 use super::AppState;
-use axum::{extract::Query, routing::get, Router};
+use crate::{
+    core::greeting::greeting_service,
+    infra::extract::{Json, Query},
+};
+use axum::{routing::get, Router};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::instrument;
@@ -15,11 +18,11 @@ pub fn routes() -> Router<AppState> {
 
 /// A name query parameter.
 #[derive(Deserialize, IntoParams)]
-pub struct Name {
+pub struct GreetingParams {
     name: Option<String>,
 }
 
-impl Debug for Name {
+impl Debug for GreetingParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.name.fmt(f)
     }
@@ -43,14 +46,14 @@ impl Greeting {
 #[utoipa::path(
     get,
     path = "/api/greet",
-    params(Name),
+    params(GreetingParams),
     responses(
         (status = 200, description = "Success", body = Greeting),
     )
 )]
 #[instrument]
-pub async fn greet(Query(name): Query<Name>) -> Json<Greeting> {
-    let name = name.name.as_deref().unwrap_or("World");
+pub async fn greet(Query(params): Query<GreetingParams>) -> Json<Greeting> {
+    let name = params.name.as_deref().unwrap_or("World");
     Json(Greeting {
         greeting: greeting_service::greet(name),
     })
@@ -59,12 +62,14 @@ pub async fn greet(Query(name): Query<Name>) -> Json<Greeting> {
 #[cfg(test)]
 mod tests {
     use super::Greeting;
-    use crate::rest::greeting_api::{greet, Name};
-    use axum::extract::Query;
+    use crate::{
+        infra::extract::Query,
+        rest::greeting_api::{greet, GreetingParams},
+    };
 
     #[sqlx::test]
     async fn hello_without_name_defaults_to_world() {
-        let response = greet(Query(Name { name: None })).await;
+        let response = greet(Query(GreetingParams { name: None })).await;
 
         assert_eq!(
             Greeting {
@@ -76,7 +81,7 @@ mod tests {
 
     #[sqlx::test]
     async fn hello_test() {
-        let response = greet(Query(Name {
+        let response = greet(Query(GreetingParams {
             name: Some("NotWorld".to_string()),
         }))
         .await;

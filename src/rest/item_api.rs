@@ -11,11 +11,11 @@ use crate::{
     infra::{
         database::DbPool,
         error::{ApiError, ApiResult},
-        extract::Json,
+        extract::{Json, Query},
     },
 };
 use axum::{
-    extract::{Query, State},
+    extract::State,
     routing::{get, post},
     Router,
 };
@@ -74,7 +74,7 @@ pub async fn list_items(db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
 
 /// Options for how to stream result.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, IntoParams)]
-pub struct StreamOptions {
+pub struct StreamParams {
     /// The delay between each result in milliseconds.
     throttle: Option<u64>,
 }
@@ -83,19 +83,19 @@ pub struct StreamOptions {
 #[utoipa::path(
     get,
     path = "/api/items2",
-    params(StreamOptions),
+    params(StreamParams),
     responses(
         (status = 200, description = "Success", body = [Item]),
         (status = 500, description = "Internal error", body = ErrorBody),
     )
 )]
-#[instrument(skip(db, stream_options))]
+#[instrument(skip(db, params))]
 pub async fn stream_items<'a>(
     State(db): State<DbPool>,
-    Query(stream_options): Query<StreamOptions>,
+    Query(params): Query<StreamParams>,
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {
     let conn = db.acquire().await?;
-    let throttle = Duration::from_millis(stream_options.throttle.unwrap_or(0));
+    let throttle = Duration::from_millis(params.throttle.unwrap_or(0));
     Ok(JsonLines::new(item_service::stream_items(conn, throttle)))
 }
 
