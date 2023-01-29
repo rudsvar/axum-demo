@@ -231,12 +231,12 @@ mod tests {
 
     async fn spawn_server(db: DbPool) -> String {
         let address = "127.0.0.1";
-        let listener = TcpListener::bind(format!("{}:0", address)).unwrap();
+        let listener = TcpListener::bind(format!("{address}:0")).unwrap();
         let port = listener.local_addr().unwrap().port();
         let config = crate::infra::config::load_config().unwrap();
         let conn = crate::integration::mq::init_mq(&config.mq).await.unwrap();
         tokio::spawn(axum_server(listener, db, conn, config));
-        format!("http://{}:{}/api", address, port)
+        format!("http://{address}:{port}/api")
     }
 
     async fn get<T: for<'a> Deserialize<'a>>(url: &str) -> T {
@@ -247,7 +247,7 @@ mod tests {
     #[sqlx::test]
     fn hello_gives_correct_response(db: DbPool) {
         let url = spawn_server(db).await;
-        let response: Greeting = get(&format!("{}/hello?name=World", url)).await;
+        let response: Greeting = get(&format!("{url}/hello?name=World")).await;
         assert_eq!("Hello, World!", response.greeting());
     }
 
@@ -256,7 +256,7 @@ mod tests {
         let url = spawn_server(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: ErrorBody = client
-            .get(&format!("{}/user", url))
+            .get(&format!("{url}/user"))
             .basic_auth("notuser", Some("user"))
             .send()
             .await
@@ -272,7 +272,7 @@ mod tests {
         let url = spawn_server(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: i32 = client
-            .get(&format!("{}/user", url))
+            .get(&format!("{url}/user"))
             .basic_auth("user", Some("user"))
             .send()
             .await
@@ -288,7 +288,7 @@ mod tests {
         let url = spawn_server(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: ErrorBody = client
-            .get(&format!("{}/user", url))
+            .get(&format!("{url}/user"))
             .basic_auth("user", Some("notuser"))
             .send()
             .await
@@ -304,7 +304,7 @@ mod tests {
         let url = spawn_server(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: ErrorBody = client
-            .get(&format!("{}/admin", url))
+            .get(&format!("{url}/admin"))
             .basic_auth("user", Some("user"))
             .send()
             .await
@@ -320,7 +320,7 @@ mod tests {
         let url = spawn_server(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: i32 = client
-            .get(&format!("{}/admin", url))
+            .get(&format!("{url}/admin"))
             .basic_auth("admin", Some("admin"))
             .send()
             .await
@@ -336,7 +336,7 @@ mod tests {
         let url = spawn_server(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: i32 = client
-            .get(&format!("{}/user", url))
+            .get(&format!("{url}/user"))
             .basic_auth("admin", Some("admin"))
             .send()
             .await
@@ -352,7 +352,7 @@ mod tests {
         let url = spawn_server(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: ErrorBody = client
-            .get(&format!("{}/admin", url))
+            .get(&format!("{url}/admin"))
             .basic_auth("admin", Some("notadmin"))
             .send()
             .await
