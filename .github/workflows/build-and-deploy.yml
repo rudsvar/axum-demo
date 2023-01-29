@@ -12,6 +12,7 @@ env:
   SQLX_VERSION: 0.6.2
   REGISTRY: "registry.digitalocean.com/rudsvar"
   IMAGE_NAME: "axum-demo"
+  DATABASE_URL: ${{ secrets.DATABASE_URL }} # For sqlx
 
 jobs:
   build:
@@ -75,10 +76,10 @@ jobs:
           args: --check
 
       - name: Set up database
-        run: sqlx database setup --database-url ${{ secrets.DATABASE_URL }}
+        run: sqlx database setup
 
       - name: Check sqlx-data.json
-        run: cargo sqlx prepare --database-url ${{ secrets.DATABASE_URL }} --check -- --lib
+        run: cargo sqlx prepare --check -- --lib
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
