@@ -75,10 +75,10 @@ jobs:
           args: --check
 
       - name: Set up database
-        run: sqlx database setup --database-url $DATABASE_URL
+        run: sqlx database setup --database-url ${{ secrets.DATABASE_URL }}
 
       - name: Check sqlx-data.json
-        run: cargo sqlx prepare --database-url $DATABASE_URL --check -- --lib
+        run: cargo sqlx prepare --database-url ${{ secrets.DATABASE_URL }} --check -- --lib
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
