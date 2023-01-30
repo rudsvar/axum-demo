@@ -81,21 +81,26 @@ jobs:
       - name: Check sqlx-data.json
         run: cargo sqlx prepare --check -- --lib
 
+      - name: Run cargo doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps
+
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
           command: test
-
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout the repo
-        uses: actions/checkout@v3
+          args: --release
 
       - name: Build container image
-        run: docker build . -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
+        run: docker build . -f Dockerfile-no-build -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2

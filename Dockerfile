@@ -23,7 +23,7 @@ WORKDIR /app
 RUN apt-get update
 RUN apt-get install -y libssl-dev
 COPY --from=builder /app/target/release/axum-demo /usr/local/bin
-COPY --from=builder /app/target/doc doc
+COPY --from=builder /app/target/doc/axum-demo doc
 COPY config.toml config.toml
 ENV RUST_LOG info,axum_web_demo=debug,sqlx=off
 ENTRYPOINT ["/usr/local/bin/axum-demo"]

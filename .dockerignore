@@ -1,3 +1,5 @@
 target
 logs
 .env
+!target/release/axum-demo
+!target/doc/axum_demo
