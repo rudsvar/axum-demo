@@ -6,6 +6,7 @@ use axum_demo::{
 };
 use sqlx::migrate::Migrator;
 use std::{net::TcpListener, time::Duration};
+use tokio_cron_scheduler::{Job, JobScheduler};
 
 static MIGRATOR: Migrator = sqlx::migrate!();
 
@@ -14,6 +15,18 @@ async fn main() -> color_eyre::Result<()> {
     // Load environment variables from .env file
     dotenv::dotenv().ok();
     color_eyre::install()?;
+
+    // Start scheduled task
+    let sched = JobScheduler::new().await?;
+    let job = Job::new_async("* * */1 * * *", |_, _| {
+        Box::pin(async move {
+            tracing::info!("Doing asynchronous check...");
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            tracing::info!("Done");
+        })
+    })?;
+    sched.add(job).await?;
+    sched.start().await?;
 
     let _guard = infra::logging::init_logging();
     let config = infra::config::load_config()?;
