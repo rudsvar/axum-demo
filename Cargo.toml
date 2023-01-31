@@ -62,7 +62,11 @@ sqlx = { version = "0.6.2", default_features = false, features = [
 reqwest = { version = "0.11.12", default-features = false, features = ["json"] }
 lapin = { version = "2.1.1", default-features = false }
 deadpool-lapin = "0.10.0"
-lettre = "0.10.1"
+lettre = { version = "0.10.1", default-features = false, features = [
+    "rustls-tls",
+    "smtp-transport",
+    "builder",
+] }
 
 # Serialization
 serde = { version = "1.0.144", features = ["derive"] }
