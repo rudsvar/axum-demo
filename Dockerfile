@@ -16,14 +16,14 @@ COPY . .
 ENV SQLX_OFFLINE true
 RUN cargo build --release --bin axum-demo
 # Build docs
-RUN cargo doc --no-deps
+RUN cargo doc --no-deps --release
 
 FROM debian:buster-slim AS runtime
 WORKDIR /app
 RUN apt-get update
 RUN apt-get install -y libssl-dev
 COPY --from=builder /app/target/release/axum-demo /usr/local/bin
-COPY --from=builder /app/target/doc/axum_demo doc
+COPY --from=builder /app/target/doc doc
 COPY config.toml config.toml
 ENV RUST_LOG info,axum_web_demo=debug,sqlx=off
 ENTRYPOINT ["/usr/local/bin/axum-demo"]
