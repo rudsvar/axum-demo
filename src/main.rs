@@ -18,7 +18,7 @@ async fn main() -> color_eyre::Result<()> {
 
     // Start scheduled task
     let sched = JobScheduler::new().await?;
-    let job = Job::new_async("* * */1 * * *", |_, _| {
+    let job = Job::new_async("0 0 * * * *", |_, _| {
         Box::pin(async move {
             tracing::info!("Doing asynchronous check...");
             tokio::time::sleep(Duration::from_secs(5)).await;
