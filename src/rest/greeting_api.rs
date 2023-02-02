@@ -45,7 +45,7 @@ impl Greeting {
 /// A handler for requests to the hello endpoint.
 #[utoipa::path(
     get,
-    path = "/api/greet",
+    path = "/api/hello",
     params(GreetingParams),
     responses(
         (status = 200, description = "Success", body = Greeting),
