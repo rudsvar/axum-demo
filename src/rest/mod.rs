@@ -16,6 +16,7 @@ use crate::{
 use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
+    error_handling::HandleErrorLayer,
     response::{Html, IntoResponse},
     routing::get,
     Extension, Router,
@@ -30,6 +31,7 @@ use tower_http::{
     catch_panic::{CatchPanicLayer, ResponseForPanic},
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
+    timeout::TimeoutLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
@@ -167,6 +169,31 @@ pub async fn axum_server(
         .finish();
 
     let state = AppState::new(db.clone(), mq, config);
+
+    // Fallible middleware from tower, mapped to infallible response with [`HandleErrorLayer`].
+    let tower_middleware = ServiceBuilder::new()
+        .layer(HandleErrorLayer::new(|e| async move {
+            InternalError::Other(format!("Tower middleware failed: {e}")).into_response()
+        }))
+        .buffer(100)
+        .concurrency_limit(100)
+        .rate_limit(1, Duration::from_micros(1));
+
+    let api = Router::<AppState>::new()
+        .route("/info", get(info))
+        .merge(greeting_api::routes())
+        .merge(item_api::routes())
+        .merge(user_api::routes())
+        .merge(integration_api::routes())
+        .merge(email_api::routes())
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(MakeRequestIdSpan)
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(DefaultOnResponse::new().level(Level::INFO))
+                .on_failure(()),
+        );
+
     let app = Router::new()
         .route("/", axum::routing::get(index))
         // Docs
@@ -177,23 +204,7 @@ pub async fn axum_server(
         // Swagger ui
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         // API
-        .nest(
-            "/api",
-            Router::<AppState>::new()
-                .route("/info", get(info))
-                .merge(greeting_api::routes())
-                .merge(item_api::routes())
-                .merge(user_api::routes())
-                .merge(integration_api::routes())
-                .merge(email_api::routes())
-                .layer(
-                    TraceLayer::new_for_http()
-                        .make_span_with(MakeRequestIdSpan)
-                        .on_request(DefaultOnRequest::new().level(Level::INFO))
-                        .on_response(DefaultOnResponse::new().level(Level::INFO))
-                        .on_failure(()),
-                ),
-        )
+        .nest("/api", api)
         // Layers
         .layer(axum::middleware::from_fn(move |req, next| {
             log_request_response(req, next, db.clone())
@@ -203,19 +214,13 @@ pub async fn axum_server(
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
         .layer(CatchPanicLayer::custom(PanicHandler))
-        .into_make_service();
-
-    // Create tower service
-    let service = ServiceBuilder::new()
-        .rate_limit(100, Duration::from_secs(100))
-        .concurrency_limit(100)
-        .timeout(Duration::from_secs(10))
-        .service(app);
+        .layer(TimeoutLayer::new(Duration::from_secs(10)))
+        .layer(tower_middleware);
 
     tracing::info!("Starting axum on {:?}", addr.local_addr());
 
     axum::Server::from_tcp(addr)?
-        .serve(service)
+        .serve(app.into_make_service())
         .with_graceful_shutdown(shutdown("axum"))
         .await
 }

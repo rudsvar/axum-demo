@@ -28,6 +28,7 @@ tower-http = { version = "0.3.4", features = [
     "compression-gzip",
     "limit",
     "catch-panic",
+    "timeout"
 ] }
 http = "0.2.8"
 hyper = "0.14.23"
