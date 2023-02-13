@@ -1,18 +1,18 @@
 //! Custom axum extractors.
 
-use super::error::ErrorBody;
+use super::error::ClientError;
 use axum::{
-    async_trait,
-    body::HttpBody,
-    extract::{FromRequest, FromRequestParts},
+    extract::{
+        rejection::{JsonRejection, QueryRejection},
+        FromRequest, FromRequestParts,
+    },
     response::IntoResponse,
-    BoxError,
 };
-use http::{request::Parts, StatusCode};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::Serialize;
 
 /// A custom JSON extractor since axum's does not let us customize the response.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, FromRequest)]
+#[from_request(via(axum::extract::Json), rejection(ClientError))]
 pub struct Json<T>(pub T);
 
 impl<T> AsRef<T> for Json<T> {
@@ -21,22 +21,9 @@ impl<T> AsRef<T> for Json<T> {
     }
 }
 
-#[async_trait]
-impl<S, B, T> FromRequest<S, B> for Json<T>
-where
-    T: DeserializeOwned,
-    B: HttpBody + Send + 'static,
-    B::Data: Send,
-    B::Error: Into<BoxError>,
-    S: Send + Sync,
-{
-    type Rejection = (StatusCode, Json<ErrorBody>);
-
-    async fn from_request(req: http::Request<B>, state: &S) -> Result<Self, Self::Rejection> {
-        let res = axum::extract::Json::from_request(req, state)
-            .await
-            .map_err(|e| (e.status(), Json(ErrorBody::new(e.body_text()))))?;
-        Ok(Json(res.0))
+impl From<JsonRejection> for ClientError {
+    fn from(value: JsonRejection) -> Self {
+        ClientError::Custom(value.status(), value.body_text())
     }
 }
 
@@ -47,7 +34,8 @@ impl<T: Serialize> IntoResponse for Json<T> {
 }
 
 /// A custom Query extractor since axum's does not let us customize the response.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, FromRequestParts)]
+#[from_request(via(axum::extract::Query), rejection(ClientError))]
 pub struct Query<T>(pub T);
 
 impl<T> AsRef<T> for Query<T> {
@@ -56,18 +44,8 @@ impl<T> AsRef<T> for Query<T> {
     }
 }
 
-#[async_trait]
-impl<S, T> FromRequestParts<S> for Query<T>
-where
-    T: DeserializeOwned,
-    S: Send + Sync,
-{
-    type Rejection = (StatusCode, Json<ErrorBody>);
-
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let res = axum::extract::Query::from_request_parts(parts, state)
-            .await
-            .map_err(|e| (e.status(), Json(ErrorBody::new(e.body_text()))))?;
-        Ok(Query(res.0))
+impl From<QueryRejection> for ClientError {
+    fn from(value: QueryRejection) -> Self {
+        ClientError::Custom(value.status(), value.body_text())
     }
 }

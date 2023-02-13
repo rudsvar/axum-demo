@@ -8,7 +8,7 @@ use axum::{http::HeaderValue, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
-use tonic::Status;
+use tonic::{Code, Status};
 use utoipa::ToSchema;
 
 /// A standard error response body.
@@ -111,6 +111,9 @@ pub enum ClientError {
     /// The resource already exists.
     #[error("conflict")]
     Conflict,
+    /// Custom error.
+    #[error("{1}")]
+    Custom(StatusCode, String),
 }
 
 impl IntoResponse for ClientError {
@@ -123,6 +126,7 @@ impl IntoResponse for ClientError {
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict => StatusCode::CONFLICT,
+            Self::Custom(status, _) => status,
         };
         (status, Json(ErrorBody::new(msg))).into_response()
     }
@@ -190,6 +194,9 @@ impl From<ApiError> for Status {
                 ClientError::Forbidden => Status::permission_denied("permission denied"),
                 ClientError::NotFound => Status::not_found("resource not found"),
                 ClientError::Conflict => Status::already_exists("resource already exists"),
+                ClientError::Custom(status, message) => {
+                    Status::new(Code::from_i32(status.as_u16() as i32), message)
+                }
             },
             ApiError::InternalError(e) => {
                 tracing::error!("request failed: {}", e);
