@@ -36,6 +36,11 @@ pub struct Greeting {
 }
 
 impl Greeting {
+    /// Constructs a new greeting.
+    pub fn new(greeting: String) -> Self {
+        Self { greeting }
+    }
+
     /// Returns the greeting.
     pub fn greeting(&self) -> &str {
         self.greeting.as_ref()

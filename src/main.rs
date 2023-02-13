@@ -31,7 +31,7 @@ async fn main() -> color_eyre::Result<()> {
     let _guard = infra::logging::init_logging();
     let config = infra::config::load_config()?;
     let db = infra::database::init_db(&config.database);
-    let mq = integration::mq::init_mq(&config.mq).await?;
+    let mq = integration::mq::init_mq(&config.mq)?;
 
     // Run migrations
     tracing::info!("Running migrations");

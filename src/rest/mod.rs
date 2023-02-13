@@ -156,19 +156,9 @@ impl ResponseForPanic for PanicHandler {
     }
 }
 
-/// Starts the axum server.
-pub async fn axum_server(
-    addr: TcpListener,
-    db: PgPool,
-    mq: MqPool,
-    config: Config,
-) -> Result<(), hyper::Error> {
-    // The GraphQL schema
-    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
-        .data(GraphQlData::new(db.clone()))
-        .finish();
-
-    let state = AppState::new(db.clone(), mq, config);
+/// Constructs the full REST API including middleware.
+pub fn rest_api(state: AppState) -> Router {
+    let db = state.db().clone();
 
     // Fallible middleware from tower, mapped to infallible response with [`HandleErrorLayer`].
     let tower_middleware = ServiceBuilder::new()
@@ -179,22 +169,43 @@ pub async fn axum_server(
         .concurrency_limit(100)
         .rate_limit(1, Duration::from_micros(1));
 
-    let api = Router::<AppState>::new()
+    // Our API
+    Router::new()
         .route("/info", get(info))
         .merge(greeting_api::routes())
         .merge(item_api::routes())
         .merge(user_api::routes())
         .merge(integration_api::routes())
         .merge(email_api::routes())
+        .with_state(state)
+        // Layers
+        .layer(TimeoutLayer::new(Duration::from_secs(10)))
+        .layer(axum::middleware::from_fn(move |req, next| {
+            log_request_response(req, next, db.clone())
+        }))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(MakeRequestIdSpan)
                 .on_request(DefaultOnRequest::new().level(Level::INFO))
                 .on_response(DefaultOnResponse::new().level(Level::INFO))
                 .on_failure(()),
-        );
+        )
+        .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+        .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
+        .layer(tower_middleware)
+        .layer(CatchPanicLayer::custom(PanicHandler))
+}
 
-    let app = Router::new()
+/// Constructs the full axum application.
+pub fn app(state: AppState) -> Router {
+    // The GraphQL schema
+    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
+        .data(GraphQlData::new(state.db().clone()))
+        .finish();
+
+    // The full application with some top level routes, a GraphQL API, and a REST API.
+    Router::new()
         .route("/", axum::routing::get(index))
         // Docs
         .merge(SpaRouter::new("/doc", "doc").index_file("axum_demo/index.html"))
@@ -204,21 +215,20 @@ pub async fn axum_server(
         // Swagger ui
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         // API
-        .nest("/api", api)
-        // Layers
-        .layer(axum::middleware::from_fn(move |req, next| {
-            log_request_response(req, next, db.clone())
-        }))
-        .with_state(state)
-        .layer(PropagateRequestIdLayer::x_request_id())
-        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
-        .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
-        .layer(CatchPanicLayer::custom(PanicHandler))
-        .layer(TimeoutLayer::new(Duration::from_secs(10)))
-        .layer(tower_middleware);
+        .nest("/api", rest_api(state))
+}
+
+/// Starts the axum server.
+pub async fn axum_server(
+    addr: TcpListener,
+    db: PgPool,
+    mq: MqPool,
+    config: Config,
+) -> Result<(), hyper::Error> {
+    let state = AppState::new(db.clone(), mq, config);
+    let app = app(state);
 
     tracing::info!("Starting axum on {:?}", addr.local_addr());
-
     axum::Server::from_tcp(addr)?
         .serve(app.into_make_service())
         .with_graceful_shutdown(shutdown("axum"))
@@ -227,21 +237,32 @@ pub async fn axum_server(
 
 #[cfg(test)]
 mod tests {
+    use super::app;
     use crate::{
-        infra::{database::DbPool, error::ErrorBody},
+        infra::{database::DbPool, error::ErrorBody, state::AppState},
         rest::{axum_server, greeting_api::Greeting},
     };
+    use axum::Router;
+    use http::{Request, StatusCode};
     use serde::Deserialize;
     use std::net::TcpListener;
+    use tower::ServiceExt;
 
     async fn spawn_server(db: DbPool) -> String {
         let address = "127.0.0.1";
         let listener = TcpListener::bind(format!("{address}:0")).unwrap();
         let port = listener.local_addr().unwrap().port();
         let config = crate::infra::config::load_config().unwrap();
-        let conn = crate::integration::mq::init_mq(&config.mq).await.unwrap();
-        tokio::spawn(axum_server(listener, db, conn, config));
+        let mq = crate::integration::mq::init_mq(&config.mq).unwrap();
+        tokio::spawn(axum_server(listener, db, mq, config));
         format!("http://{address}:{port}/api")
+    }
+
+    fn test_app(db: DbPool) -> Router {
+        let config = crate::infra::config::load_config().unwrap();
+        let mq = crate::integration::mq::init_mq(&config.mq).unwrap();
+        let state = AppState::new(db, mq, config);
+        app(state)
     }
 
     async fn get<T: for<'a> Deserialize<'a>>(url: &str) -> T {
@@ -366,5 +387,39 @@ mod tests {
             .await
             .unwrap();
         assert_eq!("unauthorized", response.message());
+    }
+
+    #[sqlx::test]
+    fn index_oneshot(db: DbPool) {
+        let app = test_app(db);
+        let req = Request::get("/").body(hyper::Body::empty()).unwrap();
+        let result = app.oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::OK, result.status())
+    }
+
+    #[sqlx::test]
+    fn hello_oneshot(db: DbPool) {
+        let app = test_app(db);
+        let req = Request::get("/api/hello")
+            .body(hyper::Body::empty())
+            .unwrap();
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::OK, res.status());
+        let body = hyper::body::to_bytes(res.into_body()).await.unwrap();
+        let greeting: Greeting = serde_json::from_slice(&body).unwrap();
+        assert_eq!(Greeting::new("Hello, World!".to_string()), greeting)
+    }
+
+    #[sqlx::test]
+    fn hello_oneshot2(db: DbPool) {
+        let app = test_app(db);
+        let req = Request::get("/api/hello?name=There")
+            .body(hyper::Body::empty())
+            .unwrap();
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::OK, res.status());
+        let body = hyper::body::to_bytes(res.into_body()).await.unwrap();
+        let greeting: Greeting = serde_json::from_slice(&body).unwrap();
+        assert_eq!(Greeting::new("Hello, There!".to_string()), greeting)
     }
 }

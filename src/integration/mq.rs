@@ -65,7 +65,7 @@ impl<T> MqClient<T> {
 }
 
 /// Establishes a connection to the message queue.
-pub async fn init_mq(config: &MqConfig) -> Result<Pool, InternalError> {
+pub fn init_mq(config: &MqConfig) -> Result<Pool, InternalError> {
     let addr = config.connection_string();
     let manager = Manager::new(addr, ConnectionProperties::default());
     Pool::builder(manager)
@@ -165,7 +165,7 @@ mod tests {
     #[tokio::test]
     async fn send_and_recv() {
         let config = load_config().unwrap();
-        let conn = init_mq(&config.mq).await.unwrap();
+        let conn = init_mq(&config.mq).unwrap();
         let conn = conn.get().await.unwrap();
         let sender = conn.create_channel().await.unwrap();
         let receiver = conn.create_channel().await.unwrap();

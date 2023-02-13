@@ -52,7 +52,7 @@ pub(crate) async fn log_request_response(
         .transpose()
         .map_err(|e| ClientError::BadRequest(e.to_string()))?
         .map(|str| str.to_string())
-        .ok_or_else(|| ClientError::BadRequest("missing host header".to_string()))?;
+        .unwrap_or_else(|| "Unknown".to_string());
     let method = req.method().to_string();
     let uri = req.uri().to_string();
 
