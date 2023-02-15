@@ -12,7 +12,7 @@ debug = true
 
 # Web
 axum = { version = "0.6.1", features = ["headers", "macros"] }
-axum-extra = { version = "0.4.2", features = [
+axum-extra = { version = "0.5.0", features = [
     "typed-routing",
     "json-lines",
     "spa",
@@ -91,7 +91,7 @@ opentelemetry = { version = "0.18.0", default-features = false, features = [
 # Utilities
 config = "0.13.2"
 uuid = { version = "1.2.0", features = ["v4"] }
-bcrypt = "0.13.0"
+bcrypt = "0.14.0"
 thiserror = "1.0.37"
 color-eyre = "0.6.2"
 chrono = { version = "0.4.23", default-features = false, features = ["serde"] }
