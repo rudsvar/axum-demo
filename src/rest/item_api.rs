@@ -5,7 +5,7 @@ use std::time::Duration;
 use super::AppState;
 use crate::{
     core::item::{
-        item_repository::{Item, NewItem},
+        item_repository::{Item, ItemRepository, NewItem},
         item_service,
     },
     infra::{
@@ -51,7 +51,8 @@ async fn create_item(
     Json(new_item): Json<NewItem>,
 ) -> ApiResult<(StatusCode, Json<Item>)> {
     let mut tx = db.begin().await?;
-    let item = item_service::create_item(&mut tx, new_item).await?;
+    let mut repository = ItemRepository::new(&mut tx);
+    let item = item_service::create_item(&mut repository, new_item).await?;
     tx.commit().await?;
     Ok((StatusCode::CREATED, Json(item)))
 }
@@ -68,7 +69,8 @@ async fn create_item(
 #[instrument(skip(db))]
 pub async fn list_items(db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
     let mut tx = db.begin().await?;
-    let items = item_service::list_items(&mut tx).await?;
+    let mut repository = ItemRepository::new(&mut tx);
+    let items = item_service::list_items(&mut repository).await?;
     Ok(Json(items))
 }
 
@@ -95,8 +97,11 @@ pub async fn stream_items<'a>(
     Query(params): Query<StreamParams>,
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {
     let conn = db.acquire().await?;
+    let repository = ItemRepository::new(conn);
     let throttle = Duration::from_millis(params.throttle.unwrap_or(0));
-    Ok(JsonLines::new(item_service::stream_items(conn, throttle)))
+    Ok(JsonLines::new(item_service::stream_items(
+        repository, throttle,
+    )))
 }
 
 #[cfg(test)]

@@ -28,7 +28,7 @@ tower-http = { version = "0.3.4", features = [
     "compression-gzip",
     "limit",
     "catch-panic",
-    "timeout"
+    "timeout",
 ] }
 http = "0.2.8"
 hyper = "0.14.23"
@@ -102,6 +102,9 @@ async-stream = "0.3.3"
 slab = "0.4.7"
 dotenv = "0.15.0"
 tokio-cron-scheduler = "0.9.3"
+mockall = "0.11.3"
+async-trait = "0.1.64"
+axum-sqlx-tx = { version = "0.5.0", features = ["postgres"] }
 
 [build-dependencies]
 tonic-build = "0.8.4"

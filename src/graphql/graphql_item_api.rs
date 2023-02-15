@@ -2,7 +2,7 @@
 
 use super::GraphQlData;
 use crate::core::item::{
-    item_repository::{self},
+    item_repository::{self, ItemRepository},
     item_service,
 };
 use async_graphql::{Context, Object};
@@ -45,8 +45,11 @@ impl QueryRoot {
         let data = ctx.data_unchecked::<GraphQlData>();
         let db = data.db();
         let mut tx = db.begin().await.unwrap();
-        let item = item_service::read_item(&mut tx, id).await.unwrap().unwrap();
-        Some(Item(item))
+        let mut item_repository = ItemRepository::new(&mut tx);
+        let item = item_service::read_item(&mut item_repository, id)
+            .await
+            .unwrap();
+        item.map(Item)
     }
 
     /// Lists all items.
@@ -54,7 +57,10 @@ impl QueryRoot {
         let data = ctx.data_unchecked::<GraphQlData>();
         let db = data.db();
         let mut tx = db.begin().await.unwrap();
-        let items = item_service::list_items(&mut tx).await.unwrap();
+        let mut item_repository = ItemRepository::new(&mut tx);
+        let items = item_service::list_items(&mut item_repository)
+            .await
+            .unwrap();
         Some(items.into_iter().map(Item).collect())
     }
 }

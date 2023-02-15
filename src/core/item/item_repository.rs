@@ -23,7 +23,7 @@ pub struct NewItem {
 }
 
 /// An existing item.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct Item {
     /// The item's id.
     pub id: i32,
@@ -35,110 +35,128 @@ pub struct Item {
     pub description: Option<String>,
 }
 
-/// Creates a new item.
-#[instrument(skip(tx))]
-pub async fn create_item(tx: &mut Tx, new_item: NewItem) -> ApiResult<Item> {
-    tracing::info!("Creating item {:?}", new_item);
-    let item = sqlx::query_as!(
-        Item,
-        r#"
-        INSERT INTO items (name, description)
-        VALUES ($1, $2)
-        RETURNING *
-        "#,
-        new_item.name,
-        new_item.description
-    )
-    .fetch_one(tx)
-    .await?;
-    tracing::info!("Created item {:?}", item);
-    Ok(item)
+/// Anything that can create an item.
+#[mockall::automock]
+#[async_trait::async_trait]
+pub trait CreateItem {
+    /// Creates a new item.
+    async fn create_item(&mut self, item: NewItem) -> ApiResult<Item>;
 }
 
-/// Read an item.
-#[instrument(skip(tx))]
-pub async fn fetch_item(tx: &mut Tx, id: i32) -> ApiResult<Option<Item>> {
-    tracing::info!("Reading item");
-    let item = sqlx::query_as!(
-        Item,
-        r#"
-        SELECT * FROM items
-        WHERE id = $1
-        "#,
-        id
-    )
-    .fetch_optional(tx)
-    .instrument(tracing::info_span!("fetch_optional"))
-    .await?;
-    tracing::info!("Found item: {:?}", item);
-    Ok(item)
+/// Anything that can fetch an item.
+#[mockall::automock]
+#[async_trait::async_trait]
+pub trait FetchItem {
+    /// Fetches an item.
+    async fn fetch_item(&mut self, id: i32) -> ApiResult<Option<Item>>;
 }
 
-/// Lists all items.
-#[instrument(skip(tx))]
-pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
-    tracing::info!("Listing items");
-    let items = sqlx::query_as!(
-        Item,
-        r#"
-        SELECT * FROM items
-        "#
-    )
-    .fetch_all(tx)
-    .instrument(tracing::info_span!("fetch_all"))
-    .await?;
-    tracing::info!("Listed {} items", items.len());
-    Ok(items)
+/// Anything that can list items.
+#[mockall::automock]
+#[async_trait::async_trait]
+pub trait ListItems {
+    /// Lists items.
+    async fn list_items(&mut self) -> ApiResult<Vec<Item>>;
 }
 
-/// Streams all items.
-#[instrument(skip(conn))]
-pub fn stream_items(
-    mut conn: DbConnection,
-    throttle: Duration,
-) -> impl Stream<Item = ApiResult<Item>> {
-    tracing::info!("Streaming items");
-    let items = try_stream! {
-        let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#).fetch(&mut conn);
-        let mut total = 0;
-        while let Some(item) = items.next().await {
-            yield item?;
-            total += 1;
-            tokio::time::sleep(throttle).await;
-        }
-        tracing::info!("Streamed {} items", total);
-    };
-    Box::pin(items)
+/// Anything that can stream items.
+#[mockall::automock]
+#[async_trait::async_trait]
+pub trait StreamItems {
+    /// Streams all items.
+    fn stream_items(self, throttle: Duration) -> impl Stream<Item = ApiResult<Item>>;
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use sqlx::PgPool;
+/// An item repository.
+#[derive(Debug)]
+pub struct ItemRepository<E> {
+    executor: E,
+}
 
-    #[sqlx::test]
-    async fn create_then_list_returns_item(db: PgPool) {
-        let mut tx = db.begin().await.unwrap();
-        let item = create_item(
-            &mut tx,
-            NewItem {
-                name: "Foo".to_string(),
-                description: None,
-            },
+impl<E> ItemRepository<E> {
+    /// Creates a new repository.
+    pub fn new(executor: E) -> Self {
+        Self { executor }
+    }
+}
+
+#[async_trait::async_trait]
+impl CreateItem for ItemRepository<&mut Tx> {
+    #[instrument(skip(self))]
+    async fn create_item(&mut self, new_item: NewItem) -> ApiResult<Item> {
+        tracing::info!("Creating item {:?}", new_item);
+        let item = sqlx::query_as!(
+            Item,
+            r#"
+                INSERT INTO items (name, description)
+                VALUES ($1, $2)
+                RETURNING *
+            "#,
+            new_item.name,
+            new_item.description
         )
-        .await
-        .unwrap();
+        .fetch_one(&mut *self.executor)
+        .await?;
+        tracing::info!("Created item {:?}", item);
+        Ok(item)
+    }
+}
 
-        assert_eq!(
-            Item {
-                id: 1,
-                name: "Foo".to_string(),
-                description: None,
-            },
-            item,
-        );
+#[async_trait::async_trait]
+impl FetchItem for ItemRepository<&mut Tx> {
+    #[instrument(skip(self))]
+    async fn fetch_item(&mut self, id: i32) -> ApiResult<Option<Item>> {
+        tracing::info!("Reading item");
+        let item = sqlx::query_as!(
+            Item,
+            r#"
+                SELECT * FROM items
+                WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&mut *self.executor)
+        .instrument(tracing::info_span!("fetch_optional"))
+        .await?;
+        tracing::info!("Found item: {:?}", item);
+        Ok(item)
+    }
+}
 
-        let items = list_items(&mut tx).await.unwrap();
-        assert_eq!(&item, items.last().unwrap());
+#[async_trait::async_trait]
+impl ListItems for ItemRepository<&mut Tx> {
+    #[instrument(skip(self))]
+    async fn list_items(&mut self) -> ApiResult<Vec<Item>> {
+        tracing::info!("Listing items");
+        let items = sqlx::query_as!(
+            Item,
+            r#"
+                SELECT * FROM items
+            "#
+        )
+        .fetch_all(&mut *self.executor)
+        .instrument(tracing::info_span!("fetch_all"))
+        .await?;
+        tracing::info!("Listed {} items", items.len());
+        Ok(items)
+    }
+}
+
+#[async_trait::async_trait]
+impl StreamItems for ItemRepository<DbConnection> {
+    #[instrument(skip(self))]
+    fn stream_items(mut self, throttle: Duration) -> impl Stream<Item = ApiResult<Item>> {
+        tracing::info!("Streaming items");
+        let items = try_stream! {
+            let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#).fetch(&mut self.executor);
+            let mut total = 0;
+            while let Some(item) = items.next().await {
+                yield item?;
+                total += 1;
+                tokio::time::sleep(throttle).await;
+            }
+            tracing::info!("Streamed {} items", total);
+        };
+        Box::pin(items)
     }
 }

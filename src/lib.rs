@@ -4,6 +4,9 @@
     rust_2018_idioms,
     missing_docs
 )]
+#![allow(incomplete_features)]
+// #![feature(async_fn_in_trait)]
+#![feature(return_position_impl_trait_in_trait)]
 
 //! A web service example with axum.
 //!
