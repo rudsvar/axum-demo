@@ -35,7 +35,11 @@ pub fn init_logging() -> LogGuard {
         .unwrap();
     let opentelemetry = tracing_opentelemetry::layer().with_tracer(opentelemetry_tracer);
 
-    let console_layer = console_subscriber::spawn();
+    let console_layer = if cfg!(debug_assertions) {
+        Some(console_subscriber::spawn())
+    } else {
+        None
+    };
 
     let reg = tracing_subscriber::registry()
         .with(stdout)

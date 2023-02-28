@@ -165,9 +165,7 @@ pub fn rest_api(state: AppState) -> Router {
         .layer(HandleErrorLayer::new(|e| async move {
             InternalError::Other(format!("Tower middleware failed: {e}")).into_response()
         }))
-        .buffer(100)
-        .concurrency_limit(100)
-        .rate_limit(1, Duration::from_micros(1));
+        .concurrency_limit(100);
 
     // Our API
     Router::new()

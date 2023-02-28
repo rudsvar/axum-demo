@@ -29,10 +29,13 @@ pub fn init_db(config: &DatabaseConfig) -> PgPool {
         .database(&config.database_name)
         .ssl_mode(PgSslMode::Prefer);
     db_options.log_statements(LevelFilter::Debug);
+    db_options.log_slow_statements(LevelFilter::Warn, Duration::from_secs(1));
     let db: PgPool = PoolOptions::default()
         .acquire_timeout(Duration::from_secs(1))
         .min_connections(1)
-        .max_connections(100)
+        .max_connections(50)
+        .idle_timeout(Duration::from_secs(10))
+        .max_lifetime(Duration::from_secs(10))
         .connect_lazy_with(db_options);
     db
 }
