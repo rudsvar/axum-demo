@@ -28,7 +28,7 @@ tower-http = { version = "0.3.4", features = [
     "compression-gzip",
     "limit",
     "catch-panic",
-    "timeout"
+    "timeout",
 ] }
 http = "0.2.8"
 hyper = "0.14.23"
@@ -36,6 +36,7 @@ tokio = { version = "1.24.1", features = [
     "macros",
     "rt-multi-thread",
     "signal",
+    "tracing",
 ] }
 
 # Docs
@@ -83,6 +84,7 @@ tracing-subscriber = { version = "0.3.15", default-features = false, features = 
 tracing-appender = "0.2.2"
 tracing-opentelemetry = { version = "0.18.0", default-features = false }
 tracing-error = "0.2.0"
+console-subscriber = "0.1.8"
 opentelemetry-jaeger = "0.17.0"
 opentelemetry = { version = "0.18.0", default-features = false, features = [
     "trace",
