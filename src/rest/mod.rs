@@ -21,7 +21,6 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use axum_extra::routing::SpaRouter;
 use hyper::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -31,6 +30,7 @@ use tower_http::{
     catch_panic::{CatchPanicLayer, ResponseForPanic},
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
+    services::{ServeDir, ServeFile},
     timeout::TimeoutLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
@@ -208,7 +208,10 @@ pub fn app(state: AppState) -> Router {
     Router::new()
         .route("/", axum::routing::get(index))
         // Docs
-        .merge(SpaRouter::new("/doc", "doc").index_file("axum_demo/index.html"))
+        .nest_service(
+            "/doc",
+            ServeDir::new("doc").not_found_service(ServeFile::new("doc/axum_demo/index.html")),
+        )
         // GraphQL
         .route("/graphiql", get(graphiql).post(graphql_handler))
         .layer(Extension(schema))

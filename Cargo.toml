@@ -12,13 +12,9 @@ debug = true
 
 # Web
 axum = { version = "0.6.1", features = ["headers", "macros"] }
-axum-extra = { version = "0.5.0", features = [
-    "typed-routing",
-    "json-lines",
-    "spa",
-] }
+axum-extra = { version = "0.6.0", features = ["typed-routing", "json-lines"] }
 tower = { version = "0.4.13", features = ["retry"] }
-tower-http = { version = "0.3.4", features = [
+tower-http = { version = "0.4.0", features = [
     "tracing",
     "trace",
     "request-id",
@@ -29,6 +25,7 @@ tower-http = { version = "0.3.4", features = [
     "limit",
     "catch-panic",
     "timeout",
+    "fs"
 ] }
 http = "0.2.8"
 hyper = "0.14.23"

@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[sqlx::test]
-    #[ignore = "Does an integration call"]
+    #[ignore = "does an integration call"]
     async fn log_client_logs(db: PgPool) {
         tracing_subscriber::fmt().init();
         let mut client = http_client(db);
