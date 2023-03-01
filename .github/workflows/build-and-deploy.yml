@@ -54,7 +54,6 @@ jobs:
           command: install
           args: >
             sqlx-cli
-            --force
             --version=${{ env.SQLX_VERSION }}
             --features=postgres,rustls
             --no-default-features
