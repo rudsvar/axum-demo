@@ -101,6 +101,7 @@ async-stream = "0.3.3"
 slab = "0.4.7"
 dotenv = "0.15.0"
 tokio-cron-scheduler = "0.9.3"
+validator = { version = "0.16.0", features = ["derive"] }
 
 [build-dependencies]
 tonic-build = "0.8.4"

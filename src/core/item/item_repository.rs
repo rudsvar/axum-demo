@@ -10,15 +10,18 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{instrument, Instrument};
 use utoipa::ToSchema;
+use validator::Validate;
 
 /// A new item.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct NewItem {
     /// The item's name.
     #[schema(example = "MyItem")]
+    #[validate(length(min = 1))]
     pub name: String,
     /// The item's description.
     #[schema(example = "A very interesting item")]
+    #[validate(length(min = 1))]
     pub description: Option<String>,
 }
 

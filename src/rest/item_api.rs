@@ -12,9 +12,11 @@ use crate::{
         database::DbPool,
         error::{ApiError, ApiResult},
         extract::{Json, Query},
+        validation::Valid,
     },
 };
 use axum::{
+    debug_handler,
     extract::State,
     routing::{get, post},
     Router,
@@ -46,12 +48,13 @@ pub fn routes() -> Router<AppState> {
     )
 )]
 #[instrument(skip(db))]
+#[debug_handler]
 async fn create_item(
     db: State<DbPool>,
-    Json(new_item): Json<NewItem>,
+    Json(new_item): Json<Valid<NewItem>>,
 ) -> ApiResult<(StatusCode, Json<Item>)> {
     let mut tx = db.begin().await?;
-    let item = item_service::create_item(&mut tx, new_item).await?;
+    let item = item_service::create_item(&mut tx, new_item.into_inner()).await?;
     tx.commit().await?;
     Ok((StatusCode::CREATED, Json(item)))
 }
