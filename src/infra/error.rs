@@ -91,7 +91,15 @@ impl From<deadpool_lapin::PoolError> for ApiError {
 
 impl From<validator::ValidationErrors> for ApiError {
     fn from(e: validator::ValidationErrors) -> Self {
-        let invalid_fields: String = e.field_errors().keys().map(|k| format!("{k},")).collect();
+        let invalid_fields: String = e
+            .field_errors()
+            .into_iter()
+            .map(|(k, v)| {
+                let codes: String = v.iter().map(|e| format!("{},", e.code)).collect();
+                let codes = codes.trim_end_matches(',');
+                format!("{k} ({codes}),")
+            })
+            .collect();
         let invalid_fields = invalid_fields.trim_end_matches(',');
         ApiError::ClientError(ClientError::UnprocessableEntity(format!(
             "invalid field(s): {invalid_fields}"
