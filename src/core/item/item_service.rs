@@ -5,6 +5,7 @@ use crate::{
     infra::{
         database::{DbConnection, Tx},
         error::ApiResult,
+        validation::Valid,
     },
 };
 use futures::Stream;
@@ -13,23 +14,26 @@ use tracing::instrument;
 
 /// Creates a new item.
 #[instrument(skip(tx))]
-pub async fn create_item(tx: &mut Tx, new_item: NewItem) -> ApiResult<Item> {
-    let item = item_repository::create_item(tx, new_item).await?;
-    Ok(item)
+pub async fn create_item(tx: &mut Tx, new_item: Valid<NewItem>) -> ApiResult<Item> {
+    item_repository::create_item(tx, new_item).await
+}
+
+/// Updates an item.
+#[instrument(skip(tx))]
+pub async fn update_item(tx: &mut Tx, id: i32, new_item: Valid<NewItem>) -> ApiResult<Item> {
+    item_repository::update_item(tx, id, new_item).await
 }
 
 /// Read an item.
 #[instrument(skip(tx))]
 pub async fn read_item(tx: &mut Tx, id: i32) -> ApiResult<Option<Item>> {
-    let item = item_repository::fetch_item(tx, id).await?;
-    Ok(item)
+    item_repository::fetch_item(tx, id).await
 }
 
 /// Lists all items.
 #[instrument(skip(tx))]
 pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
-    let items = item_repository::list_items(tx).await?;
-    Ok(items)
+    item_repository::list_items(tx).await
 }
 
 /// Streams all items.

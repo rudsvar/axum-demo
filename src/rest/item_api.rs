@@ -51,10 +51,11 @@ pub fn routes() -> Router<AppState> {
 #[debug_handler]
 async fn create_item(
     db: State<DbPool>,
-    Json(new_item): Json<Valid<NewItem>>,
+    Json(new_item): Json<NewItem>,
 ) -> ApiResult<(StatusCode, Json<Item>)> {
+    let new_item = Valid::new(new_item)?;
     let mut tx = db.begin().await?;
-    let item = item_service::create_item(&mut tx, new_item.into_inner()).await?;
+    let item = item_service::create_item(&mut tx, new_item).await?;
     tx.commit().await?;
     Ok((StatusCode::CREATED, Json(item)))
 }

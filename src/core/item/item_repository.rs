@@ -3,6 +3,7 @@
 use crate::infra::{
     database::{DbConnection, Tx},
     error::ApiResult,
+    validation::Valid,
 };
 use async_stream::try_stream;
 use futures::{Stream, StreamExt};
@@ -40,7 +41,8 @@ pub struct Item {
 
 /// Creates a new item.
 #[instrument(skip(tx))]
-pub async fn create_item(tx: &mut Tx, new_item: NewItem) -> ApiResult<Item> {
+pub async fn create_item(tx: &mut Tx, new_item: Valid<NewItem>) -> ApiResult<Item> {
+    let new_item = new_item.into_inner();
     tracing::info!("Creating item {:?}", new_item);
     let item = sqlx::query_as!(
         Item,
@@ -74,6 +76,27 @@ pub async fn fetch_item(tx: &mut Tx, id: i32) -> ApiResult<Option<Item>> {
     .instrument(tracing::info_span!("fetch_optional"))
     .await?;
     tracing::info!("Found item: {:?}", item);
+    Ok(item)
+}
+
+/// Updates an item.
+#[instrument(skip(tx))]
+pub async fn update_item(tx: &mut Tx, id: i32, new_item: Valid<NewItem>) -> ApiResult<Item> {
+    let new_item = new_item.into_inner();
+    tracing::info!("Creating item {:?}", new_item);
+    let item = sqlx::query_as!(
+        Item,
+        r#"
+        UPDATE items
+        SET name = $1, description = $2
+        RETURNING *
+        "#,
+        new_item.name,
+        new_item.description
+    )
+    .fetch_one(tx)
+    .await?;
+    tracing::info!("Updated item {:?}", item);
     Ok(item)
 }
 
@@ -124,10 +147,11 @@ mod tests {
         let mut tx = db.begin().await.unwrap();
         let item = create_item(
             &mut tx,
-            NewItem {
+            Valid::new(NewItem {
                 name: "Foo".to_string(),
                 description: None,
-            },
+            })
+            .unwrap(),
         )
         .await
         .unwrap();

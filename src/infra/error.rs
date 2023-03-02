@@ -89,6 +89,16 @@ impl From<deadpool_lapin::PoolError> for ApiError {
     }
 }
 
+impl From<validator::ValidationErrors> for ApiError {
+    fn from(e: validator::ValidationErrors) -> Self {
+        let invalid_fields: String = e.field_errors().keys().map(|k| format!("{k},")).collect();
+        let invalid_fields = invalid_fields.trim_end_matches(',');
+        ApiError::ClientError(ClientError::UnprocessableEntity(format!(
+            "invalid field(s): {invalid_fields}"
+        )))
+    }
+}
+
 /// Errors caused by the client.
 /// The client can do something to fix these.
 #[derive(Debug, thiserror::Error)]
@@ -111,6 +121,9 @@ pub enum ClientError {
     /// The resource already exists.
     #[error("conflict")]
     Conflict,
+    /// Validation errors.
+    #[error("{0}")]
+    UnprocessableEntity(String),
     /// Custom error.
     #[error("{1}")]
     Custom(StatusCode, String),
@@ -126,6 +139,7 @@ impl IntoResponse for ClientError {
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict => StatusCode::CONFLICT,
+            Self::UnprocessableEntity(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Custom(status, _) => status,
         };
         (status, Json(ErrorBody::new(msg))).into_response()
@@ -194,6 +208,9 @@ impl From<ApiError> for Status {
                 ClientError::Forbidden => Status::permission_denied("permission denied"),
                 ClientError::NotFound => Status::not_found("resource not found"),
                 ClientError::Conflict => Status::already_exists("resource already exists"),
+                ClientError::UnprocessableEntity(_) => {
+                    Status::invalid_argument("unprocessable entity")
+                }
                 ClientError::Custom(status, message) => {
                     Status::new(Code::from_i32(status.as_u16() as i32), message)
                 }

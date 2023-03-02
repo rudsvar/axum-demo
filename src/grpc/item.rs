@@ -9,6 +9,7 @@ use crate::{
     infra::{
         database::DbPool,
         error::{ApiError, ClientError},
+        validation::Valid,
     },
 };
 use tonic::Status;
@@ -51,6 +52,7 @@ impl ItemService for ItemServiceImpl {
             description: Some(new_item.description),
         };
         // Create item
+        let new_item = Valid::new(new_item).map_err(ApiError::from)?;
         let item = item_repository::create_item(&mut tx, new_item).await?;
         // Map item to response type
         let item = self::item::Item {
