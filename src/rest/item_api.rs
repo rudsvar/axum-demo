@@ -10,15 +10,15 @@ use crate::{
     },
     infra::{
         database::DbPool,
-        error::{ApiError, ApiResult},
+        error::{ApiError, ApiResult, ClientError},
         extract::{Json, Query},
         validation::Valid,
     },
 };
 use axum::{
     debug_handler,
-    extract::State,
-    routing::{get, post},
+    extract::{Path, State},
+    routing::{delete, get, post, put},
     Router,
 };
 use axum_extra::{json_lines::AsResponse, response::JsonLines};
@@ -32,6 +32,9 @@ use utoipa::IntoParams;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/items", post(create_item))
+        .route("/items/:id", get(get_item))
+        .route("/items/:id", put(update_item))
+        .route("/items/:id", delete(delete_item))
         .route("/items", get(list_items))
         .route("/items2", get(stream_items))
 }
@@ -42,9 +45,9 @@ pub fn routes() -> Router<AppState> {
     path = "/api/items",
     request_body = NewItem,
     responses(
-        (status = 201, description = "Ok", body = Item),
+        (status = 201, description = "Created", body = Item),
         (status = 409, description = "Conflict", body = ErrorBody),
-        (status = 500, description = "Internal error", body = ErrorBody),
+        (status = 500, description = "Internal Server Error", body = ErrorBody),
     )
 )]
 #[instrument(skip(db))]
@@ -58,6 +61,68 @@ async fn create_item(
     let item = item_service::create_item(&mut tx, new_item).await?;
     tx.commit().await?;
     Ok((StatusCode::CREATED, Json(item)))
+}
+
+/// Gets an item.
+#[utoipa::path(
+    get,
+    path = "/api/items/{id}",
+    responses(
+        (status = 200, description = "Ok", body = Item),
+        (status = 404, description = "Not Found", body = ErrorBody),
+        (status = 500, description = "Internal Server Error", body = ErrorBody),
+    )
+)]
+#[instrument(skip(db))]
+async fn get_item(db: State<DbPool>, Path(id): Path<i32>) -> ApiResult<(StatusCode, Json<Item>)> {
+    let mut tx = db.begin().await?;
+    let item = item_service::read_item(&mut tx, id)
+        .await?
+        .ok_or(ClientError::NotFound)?;
+    tx.commit().await?;
+    Ok((StatusCode::OK, Json(item)))
+}
+
+/// Updates an item.
+#[utoipa::path(
+    put,
+    path = "/api/items/{id}",
+    request_body = NewItem,
+    responses(
+        (status = 200, description = "Ok", body = Item),
+        (status = 404, description = "Not Found", body = ErrorBody),
+        (status = 500, description = "Internal Server Error", body = ErrorBody),
+    )
+)]
+#[instrument(skip(db))]
+async fn update_item(
+    db: State<DbPool>,
+    Path(id): Path<i32>,
+    Json(new_item): Json<NewItem>,
+) -> ApiResult<(StatusCode, Json<Item>)> {
+    let new_item = Valid::new(new_item)?;
+    let mut tx = db.begin().await?;
+    let item = item_service::update_item(&mut tx, id, new_item).await?;
+    tx.commit().await?;
+    Ok((StatusCode::CREATED, Json(item)))
+}
+
+/// Deletes an item.
+#[utoipa::path(
+    delete,
+    path = "/api/items/{id}",
+    responses(
+        (status = 200, description = "Ok", body = Item),
+        (status = 404, description = "Not Found", body = ErrorBody),
+        (status = 500, description = "Internal Server Error", body = ErrorBody),
+    )
+)]
+#[instrument(skip(db))]
+async fn delete_item(db: State<DbPool>, Path(id): Path<i32>) -> ApiResult<StatusCode> {
+    let mut tx = db.begin().await?;
+    item_service::delete_item(&mut tx, id).await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Lists all items.

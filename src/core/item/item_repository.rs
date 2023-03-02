@@ -2,7 +2,7 @@
 
 use crate::infra::{
     database::{DbConnection, Tx},
-    error::ApiResult,
+    error::{ApiResult, ClientError},
     validation::Valid,
 };
 use async_stream::try_stream;
@@ -83,7 +83,7 @@ pub async fn fetch_item(tx: &mut Tx, id: i32) -> ApiResult<Option<Item>> {
 #[instrument(skip(tx))]
 pub async fn update_item(tx: &mut Tx, id: i32, new_item: Valid<NewItem>) -> ApiResult<Item> {
     let new_item = new_item.into_inner();
-    tracing::info!("Creating item {:?}", new_item);
+    tracing::info!("Updating item {:?}", new_item);
     let item = sqlx::query_as!(
         Item,
         r#"
@@ -98,6 +98,31 @@ pub async fn update_item(tx: &mut Tx, id: i32, new_item: Valid<NewItem>) -> ApiR
     .await?;
     tracing::info!("Updated item {:?}", item);
     Ok(item)
+}
+
+/// Deletes an item.
+#[instrument(skip(tx))]
+pub async fn delete_item(tx: &mut Tx, id: i32) -> ApiResult<()> {
+    tracing::info!("Deleting item {:?}", id);
+    let rows = sqlx::query_as!(
+        Item,
+        r#"
+        DELETE FROM items
+        WHERE id = $1
+        "#,
+        id
+    )
+    .execute(tx)
+    .await?;
+
+    if rows.rows_affected() == 0 {
+        tracing::warn!("Item not found");
+        return Err(ClientError::NotFound)?;
+    }
+
+    tracing::info!("Deleted item");
+
+    Ok(())
 }
 
 /// Lists all items.

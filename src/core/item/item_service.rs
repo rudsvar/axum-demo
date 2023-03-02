@@ -30,6 +30,12 @@ pub async fn read_item(tx: &mut Tx, id: i32) -> ApiResult<Option<Item>> {
     item_repository::fetch_item(tx, id).await
 }
 
+/// Delete an item.
+#[instrument(skip(tx))]
+pub async fn delete_item(tx: &mut Tx, id: i32) -> ApiResult<()> {
+    item_repository::delete_item(tx, id).await
+}
+
 /// Lists all items.
 #[instrument(skip(tx))]
 pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {

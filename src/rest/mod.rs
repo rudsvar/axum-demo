@@ -91,19 +91,6 @@ impl Modify for SecurityAddon {
     }
 }
 
-async fn index() -> Html<&'static str> {
-    Html(
-        r#"
-            <h1>Axum demo</h1>
-            <ul>
-                <li> <a href="/doc/axum_demo/index.html">Crate documentation</a> </li>
-                <li> <a href="/swagger-ui">Swagger UI</a> </li>
-                <li> <a href="/graphiql">GraphiQL IDE</a> </li>
-            </ul>
-        "#,
-    )
-}
-
 /// A handler for GraphQL requests.
 pub async fn graphql_handler(
     schema: Extension<GraphQlSchema>,
@@ -204,7 +191,8 @@ pub fn app(state: AppState) -> Router {
 
     // The full application with some top level routes, a GraphQL API, and a REST API.
     Router::new()
-        .route("/", axum::routing::get(index))
+        // Index
+        .nest_service("/", ServeDir::new("static"))
         // Docs
         .nest_service(
             "/doc",
