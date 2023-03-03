@@ -15,13 +15,12 @@ use crate::{
         validation::Valid,
     },
 };
-use axum::{
-    debug_handler,
-    extract::{Path, State},
-    routing::{delete, get, post, put},
-    Router,
+use axum::{extract::State, Router};
+use axum_extra::{
+    json_lines::AsResponse,
+    response::JsonLines,
+    routing::{RouterExt, TypedPath},
 };
-use axum_extra::{json_lines::AsResponse, response::JsonLines};
 use futures::Stream;
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -31,13 +30,25 @@ use utoipa::IntoParams;
 /// The item API endpoints.
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/items", post(create_item))
-        .route("/items/:id", get(get_item))
-        .route("/items/:id", put(update_item))
-        .route("/items/:id", delete(delete_item))
-        .route("/items", get(list_items))
-        .route("/items2", get(stream_items))
+        .typed_post(create_item)
+        .typed_get(get_item)
+        .typed_put(update_item)
+        .typed_delete(delete_item)
+        .typed_get(list_items)
+        .typed_get(stream_items)
 }
+
+#[derive(Deserialize, TypedPath)]
+#[typed_path("/items", rejection(ClientError))]
+struct Items;
+
+#[derive(Deserialize, TypedPath)]
+#[typed_path("/items2", rejection(ClientError))]
+struct Items2;
+
+#[derive(Deserialize, TypedPath)]
+#[typed_path("/items/:id", rejection(ClientError))]
+struct ItemsId(i32);
 
 /// Creates a new item.
 #[utoipa::path(
@@ -50,9 +61,9 @@ pub fn routes() -> Router<AppState> {
         (status = 500, description = "Internal Server Error", body = ErrorBody),
     )
 )]
-#[instrument(skip(db))]
-#[debug_handler]
+#[instrument(skip_all, fields(new_item))]
 async fn create_item(
+    Items: Items,
     db: State<DbPool>,
     Json(new_item): Json<NewItem>,
 ) -> ApiResult<(StatusCode, Json<Item>)> {
@@ -73,8 +84,8 @@ async fn create_item(
         (status = 500, description = "Internal Server Error", body = ErrorBody),
     )
 )]
-#[instrument(skip(db))]
-async fn get_item(db: State<DbPool>, Path(id): Path<i32>) -> ApiResult<(StatusCode, Json<Item>)> {
+#[instrument(skip_all, fields(id))]
+async fn get_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<(StatusCode, Json<Item>)> {
     let mut tx = db.begin().await?;
     let item = item_service::read_item(&mut tx, id)
         .await?
@@ -96,8 +107,8 @@ async fn get_item(db: State<DbPool>, Path(id): Path<i32>) -> ApiResult<(StatusCo
 )]
 #[instrument(skip(db))]
 async fn update_item(
+    ItemsId(id): ItemsId,
     db: State<DbPool>,
-    Path(id): Path<i32>,
     Json(new_item): Json<NewItem>,
 ) -> ApiResult<(StatusCode, Json<Item>)> {
     let new_item = Valid::new(new_item)?;
@@ -117,8 +128,8 @@ async fn update_item(
         (status = 500, description = "Internal Server Error", body = ErrorBody),
     )
 )]
-#[instrument(skip(db))]
-async fn delete_item(db: State<DbPool>, Path(id): Path<i32>) -> ApiResult<StatusCode> {
+#[instrument(skip_all, fields(id))]
+async fn delete_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<StatusCode> {
     let mut tx = db.begin().await?;
     item_service::delete_item(&mut tx, id).await?;
     tx.commit().await?;
@@ -134,8 +145,8 @@ async fn delete_item(db: State<DbPool>, Path(id): Path<i32>) -> ApiResult<Status
         (status = 500, description = "Internal error", body = ErrorBody),
     )
 )]
-#[instrument(skip(db))]
-pub async fn list_items(db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
+#[instrument(skip_all)]
+async fn list_items(Items: Items, db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
     let mut tx = db.begin().await?;
     let items = item_service::list_items(&mut tx).await?;
     Ok(Json(items))
@@ -158,8 +169,9 @@ pub struct StreamParams {
         (status = 500, description = "Internal error", body = ErrorBody),
     )
 )]
-#[instrument(skip(db, params))]
-pub async fn stream_items<'a>(
+#[instrument(skip_all, fields(params))]
+async fn stream_items<'a>(
+    Items2: Items2,
     State(db): State<DbPool>,
     Query(params): Query<StreamParams>,
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {
