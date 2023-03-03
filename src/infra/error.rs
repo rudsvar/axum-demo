@@ -4,11 +4,16 @@
 //! you likely want to return a [`ApiResult`].
 
 use super::extract::Json;
-use axum::{http::HeaderValue, response::IntoResponse};
+use axum::{
+    extract::rejection::{JsonRejection, PathRejection, QueryRejection},
+    http::HeaderValue,
+    response::IntoResponse,
+};
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tonic::{Code, Status};
+use tower_http::catch_panic::ResponseForPanic;
 use utoipa::ToSchema;
 
 /// A standard error response body.
@@ -137,6 +142,30 @@ pub enum ClientError {
     Custom(StatusCode, String),
 }
 
+impl Default for ClientError {
+    fn default() -> Self {
+        Self::BadRequest("Bad Request".to_string())
+    }
+}
+
+impl From<JsonRejection> for ClientError {
+    fn from(value: JsonRejection) -> Self {
+        ClientError::Custom(value.status(), value.body_text())
+    }
+}
+
+impl From<QueryRejection> for ClientError {
+    fn from(value: QueryRejection) -> Self {
+        ClientError::Custom(value.status(), value.body_text())
+    }
+}
+
+impl From<PathRejection> for ClientError {
+    fn from(value: PathRejection) -> Self {
+        ClientError::Custom(value.status(), value.body_text())
+    }
+}
+
 impl IntoResponse for ClientError {
     fn into_response(self) -> axum::response::Response {
         let msg = self.to_string();
@@ -228,5 +257,20 @@ impl From<ApiError> for Status {
                 Status::internal("internal error")
             }
         }
+    }
+}
+
+/// A handler for converting panics into proper responses for the client.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PanicHandler;
+
+impl ResponseForPanic for PanicHandler {
+    type ResponseBody = axum::body::BoxBody;
+
+    fn response_for_panic(
+        &mut self,
+        _: Box<dyn std::any::Any + Send + 'static>,
+    ) -> http::Response<Self::ResponseBody> {
+        ApiError::InternalError(InternalError::Other("Panic".to_string())).into_response()
     }
 }

@@ -1,12 +1,11 @@
 //! REST API implementation.
 
+use self::openapi::ApiDoc;
 use crate::{
-    core::item::item_repository,
     graphql::{graphql_item_api::QueryRoot, GraphQlData, GraphQlSchema},
     infra::{
         config::Config,
-        error::{ApiError, InternalError},
-        extract::Json,
+        error::{InternalError, PanicHandler},
         state::AppState,
     },
     integration::mq::MqPool,
@@ -22,12 +21,11 @@ use axum::{
     Extension, Router,
 };
 use hyper::header::AUTHORIZATION;
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
 use tower::ServiceBuilder;
 use tower_http::{
-    catch_panic::{CatchPanicLayer, ResponseForPanic},
+    catch_panic::CatchPanicLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
     services::{ServeDir, ServeFile},
@@ -35,61 +33,17 @@ use tower_http::{
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
-use utoipa::{
-    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
-    Modify, OpenApi, ToSchema,
-};
+use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub mod email_api;
 pub mod greeting_api;
+pub mod info_api;
 pub mod integration_api;
 pub mod item_api;
 pub mod middleware;
+pub mod openapi;
 pub mod user_api;
-
-// OpenApi configuration.
-#[derive(OpenApi)]
-#[openapi(
-    paths(
-        info,
-        greeting_api::greet,
-        item_api::create_item,
-        item_api::list_items,
-        item_api::stream_items,
-        user_api::user,
-        user_api::admin,
-        integration_api::remote_items,
-        integration_api::post_to_mq,
-        integration_api::read_from_mq,
-    ),
-    components(
-        schemas(
-            AppInfo,
-            greeting_api::Greeting,
-            item_repository::NewItem,
-            item_repository::Item,
-            integration_api::Message,
-            crate::infra::error::ErrorBody
-        )
-    ),
-    modifiers(&SecurityAddon)
-)]
-struct ApiDoc;
-
-/// Security settings
-struct SecurityAddon;
-
-impl Modify for SecurityAddon {
-    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-        if let Some(components) = openapi.components.as_mut() {
-            components.add_security_scheme(
-                "basic",
-                SecurityScheme::Http(Http::new(HttpAuthScheme::Basic)),
-            )
-        }
-    }
-}
 
 /// A handler for GraphQL requests.
 pub async fn graphql_handler(
@@ -102,45 +56,6 @@ pub async fn graphql_handler(
 /// A handler for the GraphQL IDE.
 pub async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/graphiql").finish())
-}
-
-/// Application information.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, ToSchema)]
-pub struct AppInfo {
-    // The application name.
-    name: &'static str,
-    // The application version.
-    version: &'static str,
-}
-
-/// Returns application information.
-#[utoipa::path(
-    get,
-    path = "/api/info",
-    responses(
-        (status = 200, description = "Success", body = AppInfo),
-    )
-)]
-pub async fn info() -> Json<AppInfo> {
-    Json(AppInfo {
-        name: env!("CARGO_PKG_NAME"),
-        version: env!("CARGO_PKG_VERSION"),
-    })
-}
-
-/// A handler for panics.
-#[derive(Clone, Copy)]
-struct PanicHandler;
-
-impl ResponseForPanic for PanicHandler {
-    type ResponseBody = axum::body::BoxBody;
-
-    fn response_for_panic(
-        &mut self,
-        _: Box<dyn std::any::Any + Send + 'static>,
-    ) -> http::Response<Self::ResponseBody> {
-        ApiError::InternalError(InternalError::Other("Panic".to_string())).into_response()
-    }
 }
 
 /// Constructs the full REST API including middleware.
@@ -156,7 +71,7 @@ pub fn rest_api(state: AppState) -> Router {
 
     // Our API
     Router::new()
-        .route("/info", get(info))
+        .merge(info_api::routes())
         .merge(greeting_api::routes())
         .merge(item_api::routes())
         .merge(user_api::routes())
