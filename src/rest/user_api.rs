@@ -1,10 +1,10 @@
 //! The user API implementation.
 
-use super::AppState;
 use crate::infra::{
     error::ApiResult,
     extract::Json,
     security::{Admin, Role, User},
+    state::AppState,
 };
 use axum::{routing::get, Router};
 use tracing::instrument;

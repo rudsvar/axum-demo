@@ -1,9 +1,11 @@
 //! Implementation of the greeting API. An API that returns a greeting based on a query parameter.
 
-use super::AppState;
 use crate::{
     core::greeting::greeting_service,
-    infra::extract::{Json, Query},
+    infra::{
+        extract::{Json, Query},
+        state::AppState,
+    },
 };
 use axum::{routing::get, Router};
 use serde::{Deserialize, Serialize};
@@ -13,7 +15,7 @@ use utoipa::{IntoParams, ToSchema};
 
 /// The hello API endpoints.
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/hello", get(greet))
+    Router::new().route("/hello", get(hello))
 }
 
 /// A name query parameter.
@@ -57,7 +59,7 @@ impl Greeting {
     )
 )]
 #[instrument]
-pub async fn greet(Query(params): Query<GreetingParams>) -> Json<Greeting> {
+pub async fn hello(Query(params): Query<GreetingParams>) -> Json<Greeting> {
     let name = params.name.as_deref().unwrap_or("World");
     Json(Greeting {
         greeting: greeting_service::greet(name),
@@ -68,13 +70,13 @@ pub async fn greet(Query(params): Query<GreetingParams>) -> Json<Greeting> {
 mod tests {
     use super::Greeting;
     use crate::{
+        rest::hello_api::{hello, GreetingParams},
         infra::extract::Query,
-        rest::greeting_api::{greet, GreetingParams},
     };
 
     #[sqlx::test]
     async fn hello_without_name_defaults_to_world() {
-        let response = greet(Query(GreetingParams { name: None })).await;
+        let response = hello(Query(GreetingParams { name: None })).await;
 
         assert_eq!(
             Greeting {
@@ -86,7 +88,7 @@ mod tests {
 
     #[sqlx::test]
     async fn hello_test() {
-        let response = greet(Query(GreetingParams {
+        let response = hello(Query(GreetingParams {
             name: Some("NotWorld".to_string()),
         }))
         .await;

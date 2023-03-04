@@ -1,8 +1,5 @@
 //! The item API implementation.
 
-use std::time::Duration;
-
-use super::AppState;
 use crate::{
     core::item::{
         item_repository::{Item, NewItem},
@@ -12,6 +9,7 @@ use crate::{
         database::DbPool,
         error::{ApiError, ApiResult, ClientError},
         extract::{Json, Query},
+        state::AppState,
         validation::Valid,
     },
 };
@@ -24,6 +22,7 @@ use axum_extra::{
 use futures::Stream;
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tracing::instrument;
 use utoipa::IntoParams;
 

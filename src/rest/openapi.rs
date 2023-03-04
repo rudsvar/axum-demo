@@ -1,6 +1,6 @@
 //! OpenAPI configuration.
 
-use super::{greeting_api, info_api, integration_api, item_api, user_api};
+use super::{hello_api, info_api, integration_api, item_api, user_api};
 use crate::core::item::item_repository;
 use utoipa::{
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
@@ -12,7 +12,7 @@ use utoipa::{
 #[openapi(
     paths(
         info_api::info,
-        greeting_api::greet,
+        hello_api::hello,
         item_api::create_item,
         item_api::list_items,
         item_api::update_item,
@@ -27,7 +27,7 @@ use utoipa::{
     components(
         schemas(
             info_api::AppInfo,
-            greeting_api::Greeting,
+            hello_api::Greeting,
             item_repository::NewItem,
             item_repository::Item,
             integration_api::Message,

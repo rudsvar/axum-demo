@@ -1,8 +1,9 @@
 //! REST API implementation.
 
-use self::openapi::ApiDoc;
+use crate::graphql::{graphiql, graphql_handler};
+use crate::rest::openapi::ApiDoc;
 use crate::{
-    graphql::{graphql_item_api::QueryRoot, GraphQlData, GraphQlSchema},
+    graphql::{graphql_item_api::QueryRoot, GraphQlData},
     infra::{
         config::Config,
         error::{InternalError, PanicHandler},
@@ -12,13 +13,9 @@ use crate::{
     rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
 };
-use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use axum::{
-    error_handling::HandleErrorLayer,
-    response::{Html, IntoResponse},
-    routing::get,
-    Extension, Router,
+    error_handling::HandleErrorLayer, response::IntoResponse, routing::get, Extension, Router,
 };
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
@@ -37,26 +34,13 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub mod email_api;
-pub mod greeting_api;
+pub mod hello_api;
 pub mod info_api;
 pub mod integration_api;
 pub mod item_api;
 pub mod middleware;
 pub mod openapi;
 pub mod user_api;
-
-/// A handler for GraphQL requests.
-pub async fn graphql_handler(
-    schema: Extension<GraphQlSchema>,
-    req: GraphQLRequest,
-) -> GraphQLResponse {
-    schema.execute(req.into_inner()).await.into()
-}
-
-/// A handler for the GraphQL IDE.
-pub async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/graphiql").finish())
-}
 
 /// Constructs the full REST API including middleware.
 pub fn rest_api(state: AppState) -> Router {
@@ -72,7 +56,7 @@ pub fn rest_api(state: AppState) -> Router {
     // Our API
     Router::new()
         .merge(info_api::routes())
-        .merge(greeting_api::routes())
+        .merge(hello_api::routes())
         .merge(item_api::routes())
         .merge(user_api::routes())
         .merge(integration_api::routes())
@@ -141,10 +125,10 @@ pub async fn axum_server(
 
 #[cfg(test)]
 mod tests {
-    use super::app;
+    use super::{app, axum_server};
     use crate::{
         infra::{database::DbPool, error::ErrorBody, state::AppState},
-        rest::{axum_server, greeting_api::Greeting},
+        rest::hello_api::Greeting,
     };
     use axum::Router;
     use http::{Request, StatusCode};

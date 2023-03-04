@@ -1,10 +1,10 @@
 //! Implementation of the greeting API. An API that returns a greeting based on a query parameter.
 
-use super::AppState;
 use crate::infra::{
     config::Config,
     error::{ApiResult, ClientError, InternalError},
     extract::Query,
+    state::AppState,
 };
 use axum::{extract::State, routing::post, Router};
 use lettre::{

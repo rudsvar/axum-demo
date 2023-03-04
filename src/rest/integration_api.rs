@@ -1,11 +1,11 @@
 //! Implementation of the integration API. An API that calls another service.
 
-use super::AppState;
 use crate::{
     core::item::item_repository::Item,
     infra::{
         error::{ApiError, ApiResult, InternalError},
         extract::Json,
+        state::AppState,
     },
     integration::{
         http::http_client,
