@@ -1,5 +1,17 @@
 {
   "db": "PostgreSQL",
+  "156375d63c85a4e373aac578f675742cd03db052e35cafa7143bfe4bf6ce9dc6": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n        DELETE FROM items\n        WHERE id = $1\n        "
+  },
   "16908cd933602950d0a8a1d539cbfd4bf7075d1cce4f305201a4e0afc70b71c7": {
     "describe": {
       "columns": [
@@ -191,6 +203,39 @@
       }
     },
     "query": "\n        INSERT INTO requests (host, method, uri, request_body, response_body, status)\n        VALUES ($1, $2, $3, $4, $5, $6)\n        RETURNING *\n        "
+  },
+  "c8eb640662a36043a76ca82aec60a10ec3b542f58fc0db5456dcdd8654163b16": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "description",
+          "ordinal": 2,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      }
+    },
+    "query": "\n        UPDATE items\n        SET name = $1, description = $2\n        RETURNING *\n        "
   },
   "d50ab4ebc40c4bd4249a6302a93b8b9c6da518f8a6ce374c6ff5e519d30ff485": {
     "describe": {
