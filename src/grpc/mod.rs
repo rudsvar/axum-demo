@@ -1,10 +1,10 @@
 //! gRPC API implementation with tonic.
 
 use crate::{
-    infra::database::DbPool,
-    shutdown,
     grpc::greeter::{hello::greeter_server::GreeterServer, MyGreeter},
     grpc::item::{item::item_service_server::ItemServiceServer, ItemServiceImpl},
+    infra::database::DbPool,
+    shutdown,
 };
 use std::net::SocketAddr;
 

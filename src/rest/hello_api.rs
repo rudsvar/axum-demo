@@ -70,8 +70,8 @@ pub async fn hello(Query(params): Query<GreetingParams>) -> Json<Greeting> {
 mod tests {
     use super::Greeting;
     use crate::{
-        rest::hello_api::{hello, GreetingParams},
         infra::extract::Query,
+        rest::hello_api::{hello, GreetingParams},
     };
 
     #[sqlx::test]
