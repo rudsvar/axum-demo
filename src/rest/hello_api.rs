@@ -7,19 +7,19 @@ use crate::{
         state::AppState,
     },
 };
-use axum::{routing::get, Router};
+use aide::axum::{routing::get, ApiRouter};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::instrument;
-use utoipa::{IntoParams, ToSchema};
 
 /// The hello API endpoints.
-pub fn routes() -> Router<AppState> {
-    Router::new().route("/hello", get(hello))
+pub fn routes() -> ApiRouter<AppState> {
+    ApiRouter::new().api_route("/hello", get(hello))
 }
 
 /// A name query parameter.
-#[derive(Deserialize, IntoParams)]
+#[derive(Deserialize, JsonSchema)]
 pub struct GreetingParams {
     name: Option<String>,
 }
@@ -31,7 +31,7 @@ impl Debug for GreetingParams {
 }
 
 /// This is a response to the hello endpoint.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Greeting {
     /// A personal greeting.
     greeting: String,
@@ -50,14 +50,6 @@ impl Greeting {
 }
 
 /// A handler for requests to the hello endpoint.
-#[utoipa::path(
-    get,
-    path = "/api/hello",
-    params(GreetingParams),
-    responses(
-        (status = 200, description = "Success", body = Greeting),
-    )
-)]
 #[instrument]
 pub async fn hello(Query(params): Query<GreetingParams>) -> Json<Greeting> {
     let name = params.name.as_deref().unwrap_or("World");

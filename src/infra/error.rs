@@ -4,6 +4,7 @@
 //! you likely want to return a [`ApiResult`].
 
 use super::extract::Json;
+use aide::{OperationIo, OperationOutput};
 use axum::{
     extract::rejection::{JsonRejection, PathRejection, QueryRejection},
     http::HeaderValue,
@@ -11,13 +12,13 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tonic::{Code, Status};
 use tower_http::catch_panic::ResponseForPanic;
-use utoipa::ToSchema;
 
 /// A standard error response body.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, OperationIo)]
 pub struct ErrorBody {
     /// A description of the error.
     message: String,
@@ -53,6 +54,17 @@ pub enum ApiError {
     /// An internal error.
     #[error("{0}")]
     InternalError(#[from] InternalError),
+}
+
+impl OperationOutput for ApiError {
+    type Inner = ErrorBody;
+
+    fn operation_response(
+        ctx: &mut aide::gen::GenContext,
+        operation: &mut aide::openapi::Operation,
+    ) -> Option<aide::openapi::Response> {
+        Json::<ErrorBody>::operation_response(ctx, operation)
+    }
 }
 
 impl IntoResponse for ApiError {

@@ -12,38 +12,31 @@ use crate::{
         mq::{MqClient, MqPool},
     },
 };
-use axum::{
-    extract::State,
+use aide::axum::{
     routing::{get, post},
-    Extension, Router,
+    ApiRouter,
 };
+use axum::{extract::State, Extension};
 use axum_extra::{json_lines::AsResponse, response::JsonLines};
 use futures::Stream;
 use http::{Method, StatusCode};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tower::Service;
 use tracing::instrument;
-use utoipa::ToSchema;
 
 /// Routes for the integrations API.
-pub fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/remote-items", get(remote_items))
-        .route("/mq", post(post_to_mq).get(read_from_mq))
-        .route("/mq2", get(stream_from_mq))
+pub fn routes() -> ApiRouter<AppState> {
+    ApiRouter::new()
+        .api_route("/remote-items", get(remote_items))
+        .api_route("/mq", post(post_to_mq).get(read_from_mq))
+        .route("/mq2", axum::routing::get(stream_from_mq))
 }
 
 /// A handler for fetching items from a "remote" system.
-#[utoipa::path(
-    get,
-    path = "/api/remote-items",
-    responses(
-        (status = 200, description = "Success", body = [Item]),
-    )
-)]
 #[instrument]
-pub async fn remote_items(Extension(db): Extension<PgPool>) -> Result<Json<Vec<Item>>, ApiError> {
+pub async fn remote_items(Extension(db): Extension<PgPool>) -> ApiResult<Json<Vec<Item>>> {
     let mut client = http_client(db);
     let req = reqwest::Request::new(
         Method::GET,
@@ -55,20 +48,12 @@ pub async fn remote_items(Extension(db): Extension<PgPool>) -> Result<Json<Vec<I
 }
 
 /// The MQ message format.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Message {
     message: String,
 }
 
 /// Post to the MQ.
-#[utoipa::path(
-    post,
-    path = "/api/mq",
-    request_body = Message,
-    responses(
-        (status = 201, description = "Created"),
-    )
-)]
 #[instrument(skip(pool))]
 pub async fn post_to_mq(
     State(pool): State<MqPool>,
@@ -85,13 +70,6 @@ pub async fn post_to_mq(
 }
 
 /// Read one message from the MQ.
-#[utoipa::path(
-    get,
-    path = "/api/mq",
-    responses(
-        (status = 200, description = "Success"),
-    )
-)]
 #[instrument(skip(pool))]
 pub async fn read_from_mq(State(pool): State<MqPool>) -> ApiResult<Json<Option<Message>>> {
     // Get MQ client
@@ -106,13 +84,6 @@ pub async fn read_from_mq(State(pool): State<MqPool>) -> ApiResult<Json<Option<M
 }
 
 /// Stream from the MQ.
-#[utoipa::path(
-    get,
-    path = "/api/mq2",
-    responses(
-        (status = 200, description = "Success"),
-    )
-)]
 #[instrument(skip(pool))]
 pub async fn stream_from_mq(
     State(pool): State<MqPool>,

@@ -35,9 +35,11 @@
 
 use super::{
     database::Tx,
-    error::{ApiError, ApiResult, ClientError},
+    error::{ApiError, ApiResult, ClientError, ErrorBody},
+    extract::Json,
     state::AppState,
 };
+use aide::{gen::GenContext, openapi::Operation, OperationInput, OperationOutput};
 use axum::{
     async_trait,
     extract::FromRequestParts,
@@ -222,6 +224,23 @@ where
         let user = user.try_upgrade()?;
 
         Ok(user)
+    }
+}
+
+impl<R> OperationInput for User<R> {
+    fn operation_input(_ctx: &mut GenContext, _operation: &mut Operation) {
+        // TODO: Add security requirement
+    }
+
+    fn inferred_early_responses(
+        ctx: &mut GenContext,
+        operation: &mut Operation,
+    ) -> Vec<(Option<u16>, aide::openapi::Response)> {
+        // TODO: Add 401 and 403
+        if let Some(res) = Json::<ErrorBody>::operation_response(ctx, operation) {
+            return vec![(Some(401), res.clone()), (Some(403), res)];
+        }
+        Vec::new()
     }
 }
 

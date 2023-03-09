@@ -14,6 +14,7 @@
                 let table = document.getElementById("items");
                 for (let item of items) {
                     let rowElement = document.createElement("tr");
+                    rowElement.id = `item-${item.id}`;
                     let rowString = `
                         <td>${item.id}</td>
                         <td>${item.name}</td>
@@ -27,9 +28,45 @@
             })
         })
         function deleteItem(id) {
-            fetch(`/api/items/${id}`, { method: "DELETE" })
+            fetch(`/api/items/${id}`, { method: "DELETE" }).then(res => {
+                if (res.status == 204) {
+                    console.log("Deleted item!");
+                    let row = document.getElementById(`item-${id}`);
+                    row.parentNode.removeChild(row);
+                }
+            })
+        }
+        function createItem() {
+            let name = document.getElementById("item-name").textContent;
+            let description = document.getElementById("item-description").textContent;
+            fetch(`/api/items`, { method: "POST", body: `{ "name", "${name}", "description": "${description}" }` }).then(res => {
+                let table = document.getElementById("items");
+                if (res.status == 201) {
+                    let rowElement = document.createElement("tr");
+                    rowElement.id = `item-${item.id}`;
+                    let rowString = `
+                        <td>${item.id}</td>
+                        <td>${item.name}</td>
+                        <td>${item.description}</td>
+                        <td>
+                            <button type="button" class="btn btn-primary" onclick="deleteItem(${item.id})">Delete</button>
+                        </td>`;
+                    rowElement.innerHTML = rowString;
+                    table.prepend(rowElement)
+                }
+            }).catch(e => console.log(e));
         }
     </script>
+
+    <form>
+        <div class="form-group">
+            <label for="item-name">Item name</label>
+            <input type="text" class="form-control" id="item-name" placeholder="Enter email">
+            <label for="item-description">Item description</label>
+            <input type="text" class="form-control" id="item-description" placeholder="Enter email">
+        </div>
+        <button type="submit" class="btn btn-primary" onclick="createItem()">Submit</button>
+    </form>
 
     <table class="table">
         <thead>
@@ -37,7 +74,7 @@
                 <th scope="col">#</th>
                 <th scope="col">Name</th>
                 <th scope="col">Description</th>
-                <th scope="col">Delete</th>
+                <th scope="col"></th>
             </tr>
         </thead>
         <tbody id="items">

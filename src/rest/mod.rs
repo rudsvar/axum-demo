@@ -1,7 +1,8 @@
 //! REST API implementation.
 
 use crate::graphql::{graphiql, graphql_handler};
-use crate::rest::openapi::ApiDoc;
+use crate::infra::error::ApiError;
+use crate::infra::extract::Json;
 use crate::{
     graphql::{graphql_item_api::QueryRoot, GraphQlData},
     infra::{
@@ -13,10 +14,14 @@ use crate::{
     rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
 };
+use aide::axum::{ApiRouter, IntoApiResponse};
+use aide::openapi::{Info, OpenApi};
+use aide::OperationOutput;
 use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use axum::{
     error_handling::HandleErrorLayer, response::IntoResponse, routing::get, Extension, Router,
 };
+use http::StatusCode;
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
@@ -30,8 +35,6 @@ use tower_http::{
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 pub mod email_api;
 pub mod hello_api;
@@ -39,11 +42,68 @@ pub mod info_api;
 pub mod integration_api;
 pub mod item_api;
 pub mod middleware;
-pub mod openapi;
 pub mod user_api;
 
+/// A successful response.
+#[derive(Debug)]
+pub struct ApiResponse<const STATUS: u16, T>(T);
+
+impl<T> ApiResponse<200, T> {
+    /// A 200 Ok response.
+    pub fn ok(value: T) -> Self {
+        Self(value)
+    }
+}
+
+impl<T> ApiResponse<201, T> {
+    /// A 201 Created response.
+    pub fn created(value: T) -> Self {
+        ApiResponse(value)
+    }
+}
+
+impl ApiResponse<204, ()> {
+    /// A 204 No Content response.
+    pub fn no_content() -> Self {
+        ApiResponse(())
+    }
+}
+
+impl<const STATUS: u16, T: OperationOutput> OperationOutput for ApiResponse<STATUS, T> {
+    type Inner = T::Inner;
+
+    fn operation_response(
+        ctx: &mut aide::gen::GenContext,
+        operation: &mut aide::openapi::Operation,
+    ) -> Option<aide::openapi::Response> {
+        T::operation_response(ctx, operation)
+    }
+
+    // fn inferred_responses(
+    //     ctx: &mut aide::gen::GenContext,
+    //     operation: &mut aide::openapi::Operation,
+    // ) -> Vec<(Option<u16>, aide::openapi::Response)> {
+    //     T::inferred_responses(ctx, operation)
+    // }
+}
+
+impl<const STATUS: u16, T: IntoResponse> IntoResponse for ApiResponse<STATUS, T> {
+    fn into_response(self) -> axum::response::Response {
+        let status = StatusCode::from_u16(STATUS).map_err(|e| InternalError::Other(e.to_string()));
+        match status {
+            Ok(status) => (status, self.0).into_response(),
+            Err(e) => e.into_response(),
+        }
+    }
+}
+
+/// Serve the OpenAPI specification.
+async fn serve_api(Extension(api): Extension<OpenApi>) -> impl IntoApiResponse {
+    Json(api)
+}
+
 /// Constructs the full REST API including middleware.
-pub fn rest_api(state: AppState) -> Router {
+pub fn rest_api(state: AppState) -> ApiRouter {
     let db = state.db().clone();
 
     // Fallible middleware from tower, mapped to infallible response with [`HandleErrorLayer`].
@@ -54,7 +114,7 @@ pub fn rest_api(state: AppState) -> Router {
         .concurrency_limit(100);
 
     // Our API
-    Router::new()
+    ApiRouter::new()
         .merge(info_api::routes())
         .merge(hello_api::routes())
         .merge(item_api::routes())
@@ -88,8 +148,16 @@ pub fn app(state: AppState) -> Router {
         .data(GraphQlData::new(state.db().clone()))
         .finish();
 
+    let mut api = OpenApi {
+        info: Info {
+            title: "Axum demo API".to_string(),
+            ..Info::default()
+        },
+        ..OpenApi::default()
+    };
+
     // The full application with some top level routes, a GraphQL API, and a REST API.
-    Router::new()
+    ApiRouter::new()
         // Index
         .nest_service("/", ServeDir::new("static"))
         // Docs
@@ -101,9 +169,11 @@ pub fn app(state: AppState) -> Router {
         .route("/graphiql", get(graphiql).post(graphql_handler))
         .layer(Extension(schema))
         // Swagger ui
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .route("/api.json", get(serve_api))
         // API
         .nest("/api", rest_api(state))
+        .finish_api_with(&mut api, |op| op.default_response::<ApiError>())
+        .layer(Extension(api))
 }
 
 /// Starts the axum server.

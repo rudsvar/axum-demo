@@ -13,164 +13,108 @@ use crate::{
         validation::Valid,
     },
 };
-use axum::{extract::State, Router};
-use axum_extra::{
-    json_lines::AsResponse,
-    response::JsonLines,
-    routing::{RouterExt, TypedPath},
+use aide::axum::{
+    routing::{delete, get, post, put},
+    ApiRouter,
 };
+use axum::extract::{Path, State};
+use axum_extra::{json_lines::AsResponse, response::JsonLines};
 use futures::Stream;
-use http::StatusCode;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::instrument;
-use utoipa::IntoParams;
+
+use super::ApiResponse;
 
 /// The item API endpoints.
-pub fn routes() -> Router<AppState> {
-    Router::new()
-        .typed_post(create_item)
-        .typed_get(get_item)
-        .typed_put(update_item)
-        .typed_delete(delete_item)
-        .typed_get(list_items)
-        .typed_get(stream_items)
+pub fn routes() -> ApiRouter<AppState> {
+    ApiRouter::new()
+        .api_route("/items", post(create_item))
+        .api_route("/items/:id", get(get_item))
+        .api_route("/items/:id", put(update_item))
+        .api_route("/items/:id", delete(delete_item))
+        .api_route("/items", get(list_items))
+        .route("/items2", axum::routing::get(stream_items))
 }
 
-#[derive(Deserialize, TypedPath)]
-#[typed_path("/items", rejection(ClientError))]
-struct Items;
-
-#[derive(Deserialize, TypedPath)]
-#[typed_path("/items2", rejection(ClientError))]
-struct Items2;
-
-#[derive(Deserialize, TypedPath)]
-#[typed_path("/items/:id", rejection(ClientError))]
-struct ItemsId(i32);
+/// The id of an item.
+#[derive(Clone, Copy, Debug, Deserialize, JsonSchema)]
+pub struct ItemId {
+    id: i32,
+}
 
 /// Creates a new item.
-#[utoipa::path(
-    post,
-    path = "/api/items",
-    request_body = NewItem,
-    responses(
-        (status = 201, description = "Created", body = Item),
-        (status = 409, description = "Conflict", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(new_item))]
 async fn create_item(
-    Items: Items,
     db: State<DbPool>,
     Json(new_item): Json<NewItem>,
-) -> ApiResult<(StatusCode, Json<Item>)> {
+) -> ApiResult<ApiResponse<201, Json<Item>>> {
     let new_item = Valid::new(new_item)?;
     let mut tx = db.begin().await?;
     let item = item_service::create_item(&mut tx, new_item).await?;
     tx.commit().await?;
-    Ok((StatusCode::CREATED, Json(item)))
+    Ok(ApiResponse::created(Json(item)))
 }
 
 /// Gets an item.
-#[utoipa::path(
-    get,
-    path = "/api/items/{id}",
-    responses(
-        (status = 200, description = "Ok", body = Item),
-        (status = 404, description = "Not Found", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(id))]
-async fn get_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<(StatusCode, Json<Item>)> {
+async fn get_item(
+    db: State<DbPool>,
+    Path(ItemId { id }): Path<ItemId>,
+) -> ApiResult<ApiResponse<200, Json<Item>>> {
     let mut tx = db.begin().await?;
     let item = item_service::read_item(&mut tx, id)
         .await?
         .ok_or(ClientError::NotFound)?;
     tx.commit().await?;
-    Ok((StatusCode::OK, Json(item)))
+    Ok(ApiResponse::ok(Json(item)))
 }
 
 /// Updates an item.
-#[utoipa::path(
-    put,
-    path = "/api/items/{id}",
-    request_body = NewItem,
-    responses(
-        (status = 200, description = "Ok", body = Item),
-        (status = 404, description = "Not Found", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip(db))]
 async fn update_item(
-    ItemsId(id): ItemsId,
     db: State<DbPool>,
+    Path(ItemId { id }): Path<ItemId>,
     Json(new_item): Json<NewItem>,
-) -> ApiResult<(StatusCode, Json<Item>)> {
+) -> ApiResult<ApiResponse<200, Json<Item>>> {
     let new_item = Valid::new(new_item)?;
     let mut tx = db.begin().await?;
     let item = item_service::update_item(&mut tx, id, new_item).await?;
     tx.commit().await?;
-    Ok((StatusCode::CREATED, Json(item)))
+    Ok(ApiResponse::ok(Json(item)))
 }
 
 /// Deletes an item.
-#[utoipa::path(
-    delete,
-    path = "/api/items/{id}",
-    responses(
-        (status = 200, description = "Ok", body = Item),
-        (status = 404, description = "Not Found", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(id))]
-async fn delete_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<StatusCode> {
+async fn delete_item(
+    db: State<DbPool>,
+    Path(ItemId { id }): Path<ItemId>,
+) -> ApiResult<ApiResponse<204, ()>> {
     let mut tx = db.begin().await?;
     item_service::delete_item(&mut tx, id).await?;
     tx.commit().await?;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(ApiResponse::no_content())
 }
 
 /// Lists all items.
-#[utoipa::path(
-    get,
-    path = "/api/items",
-    responses(
-        (status = 200, description = "Success", body = [Item]),
-        (status = 500, description = "Internal error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all)]
-async fn list_items(Items: Items, db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
+async fn list_items(db: State<DbPool>) -> ApiResult<ApiResponse<200, Json<Vec<Item>>>> {
     let mut tx = db.begin().await?;
     let items = item_service::list_items(&mut tx).await?;
-    Ok(Json(items))
+    Ok(ApiResponse::ok(Json(items)))
 }
 
 /// Options for how to stream result.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, IntoParams)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct StreamParams {
     /// The delay between each result in milliseconds.
     throttle: Option<u64>,
 }
 
 /// Streams all items.
-#[utoipa::path(
-    get,
-    path = "/api/items2",
-    params(StreamParams),
-    responses(
-        (status = 200, description = "Success", body = [Item]),
-        (status = 500, description = "Internal error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(params))]
 async fn stream_items<'a>(
-    Items2: Items2,
     State(db): State<DbPool>,
     Query(params): Query<StreamParams>,
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {

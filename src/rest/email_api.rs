@@ -11,10 +11,10 @@ use lettre::{
     message::Mailbox, transport::smtp::authentication::Credentials, Message, SmtpTransport,
     Transport,
 };
+use schemars::JsonSchema;
 use serde::Deserialize;
 use std::fmt::Debug;
 use tracing::instrument;
-use utoipa::IntoParams;
 
 /// Email routes.
 pub fn routes() -> Router<AppState> {
@@ -22,21 +22,13 @@ pub fn routes() -> Router<AppState> {
 }
 
 /// Information about the email to send.
-#[derive(Debug, Deserialize, IntoParams)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct EmailParams {
     to: String,
     subject: String,
 }
 
 /// A handler for requests to the hello endpoint.
-#[utoipa::path(
-    post,
-    path = "/api/email",
-    params(EmailParams),
-    responses(
-        (status = 201, description = "Success"),
-    )
-)]
 #[instrument(skip(config))]
 pub async fn send_email(
     State(config): State<Config>,
