@@ -153,6 +153,10 @@ pub fn app(state: AppState) -> Router {
             title: "Axum demo API".to_string(),
             ..Info::default()
         },
+        servers: vec![aide::openapi::Server {
+            url: "http://localhost:8080".to_string(),
+            ..aide::openapi::Server::default()
+        }],
         ..OpenApi::default()
     };
 
@@ -172,7 +176,17 @@ pub fn app(state: AppState) -> Router {
         .route("/api.json", get(serve_api))
         // API
         .nest("/api", rest_api(state))
-        .finish_api_with(&mut api, |op| op.default_response::<ApiError>())
+        .finish_api_with(&mut api, |op| {
+            op.default_response::<ApiError>().security_scheme(
+                "basic",
+                aide::openapi::SecurityScheme::Http {
+                    scheme: "Basic".to_string(),
+                    description: Some("Username and password".to_string()),
+                    bearer_format: None,
+                    extensions: Default::default(),
+                },
+            )
+        })
         .layer(Extension(api))
 }
 

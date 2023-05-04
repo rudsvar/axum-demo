@@ -39,7 +39,11 @@ use super::{
     extract::Json,
     state::AppState,
 };
-use aide::{gen::GenContext, openapi::Operation, OperationInput, OperationOutput};
+use aide::{
+    gen::GenContext,
+    openapi::{Operation, ReferenceOr, Responses, SecurityRequirement, StatusCode},
+    OperationInput, OperationOutput,
+};
 use axum::{
     async_trait,
     extract::FromRequestParts,
@@ -228,8 +232,25 @@ where
 }
 
 impl<R> OperationInput for User<R> {
+    /// Add basic auth requirement to all user operations.
     fn operation_input(_ctx: &mut GenContext, _operation: &mut Operation) {
-        // TODO: Add security requirement
+        if let Some(error_response) = Json::<ErrorBody>::operation_response(_ctx, _operation) {
+            let error_responses: ReferenceOr<aide::openapi::Response> =
+                ReferenceOr::Item(error_response);
+            // Take responses or default
+            let mut responses = _operation.responses.take().unwrap_or(Responses::default());
+            responses
+                .responses
+                .insert(StatusCode::Code(401), error_responses.clone());
+            responses
+                .responses
+                .insert(StatusCode::Code(404), error_responses);
+            // Re-insert responses
+            _operation.responses = Some(responses);
+        }
+        let mut requirements = SecurityRequirement::new();
+        requirements.insert("basic".to_owned(), vec![]);
+        _operation.security = vec![requirements];
     }
 
     fn inferred_early_responses(
