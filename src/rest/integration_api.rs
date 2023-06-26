@@ -3,7 +3,7 @@
 use crate::{
     core::item::item_repository::Item,
     infra::{
-        error::{ApiError, ApiResult, InternalError},
+        error::{ApiError, ApiResult},
         extract::Json,
         state::AppState,
     },
@@ -50,7 +50,10 @@ pub async fn remote_items(Extension(db): Extension<PgPool>) -> Result<Json<Vec<I
         "http://localhost:8080/api/items".parse().unwrap(),
     );
     let res = client.call(req).await?;
-    let res: Vec<Item> = res.json().await.map_err(InternalError::from)?;
+    let res: Vec<Item> = res
+        .json()
+        .await
+        .map_err(|e| ApiError::InternalError(e.into()))?;
     Ok(Json(res))
 }
 

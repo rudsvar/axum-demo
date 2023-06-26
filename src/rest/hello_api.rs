@@ -3,11 +3,13 @@
 use crate::{
     core::greeting::greeting_service,
     infra::{
+        error::{ApiError, ApiResult},
         extract::{Json, Query},
         state::AppState,
     },
 };
 use axum::{routing::get, Router};
+use color_eyre::{eyre::anyhow, Help};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::instrument;
@@ -59,11 +61,16 @@ impl Greeting {
     )
 )]
 #[instrument]
-pub async fn hello(Query(params): Query<GreetingParams>) -> Json<Greeting> {
+pub async fn hello(Query(params): Query<GreetingParams>) -> ApiResult<Json<Greeting>> {
     let name = params.name.as_deref().unwrap_or("World");
-    Json(Greeting {
+    if true {
+        return Err(ApiError::InternalError(
+            anyhow!("Bad request").with_note(|| "Oh no!"),
+        ));
+    }
+    Ok(Json(Greeting {
         greeting: greeting_service::greet(name),
-    })
+    }))
 }
 
 #[cfg(test)]
@@ -76,7 +83,7 @@ mod tests {
 
     #[sqlx::test]
     async fn hello_without_name_defaults_to_world() {
-        let response = hello(Query(GreetingParams { name: None })).await;
+        let response = hello(Query(GreetingParams { name: None })).await.unwrap();
 
         assert_eq!(
             Greeting {
@@ -91,7 +98,8 @@ mod tests {
         let response = hello(Query(GreetingParams {
             name: Some("NotWorld".to_string()),
         }))
-        .await;
+        .await
+        .unwrap();
 
         assert_eq!(
             Greeting {

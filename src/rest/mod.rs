@@ -1,14 +1,11 @@
 //! REST API implementation.
 
 use crate::graphql::{graphiql, graphql_handler};
+use crate::infra::error::ApiError;
 use crate::rest::openapi::ApiDoc;
 use crate::{
     graphql::{graphql_item_api::QueryRoot, GraphQlData},
-    infra::{
-        config::Config,
-        error::{InternalError, PanicHandler},
-        state::AppState,
-    },
+    infra::{config::Config, error::PanicHandler, state::AppState},
     integration::mq::MqPool,
     rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
@@ -17,6 +14,7 @@ use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use axum::{
     error_handling::HandleErrorLayer, response::IntoResponse, routing::get, Extension, Router,
 };
+use color_eyre::eyre::anyhow;
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
@@ -49,7 +47,7 @@ pub fn rest_api(state: AppState) -> Router {
     // Fallible middleware from tower, mapped to infallible response with [`HandleErrorLayer`].
     let tower_middleware = ServiceBuilder::new()
         .layer(HandleErrorLayer::new(|e| async move {
-            InternalError::Other(format!("Tower middleware failed: {e}")).into_response()
+            ApiError::InternalError(anyhow!("Tower middleware failed: {e}")).into_response()
         }))
         .concurrency_limit(100);
 

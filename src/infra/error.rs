@@ -6,10 +6,10 @@
 use super::extract::Json;
 use axum::{
     extract::rejection::{JsonRejection, PathRejection, QueryRejection},
-    http::HeaderValue,
     response::IntoResponse,
 };
 use chrono::{DateTime, Utc};
+use color_eyre::eyre::anyhow;
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tonic::{Code, Status};
@@ -52,7 +52,7 @@ pub enum ApiError {
     ClientError(#[from] ClientError),
     /// An internal error.
     #[error("{0}")]
-    InternalError(#[from] InternalError),
+    InternalError(#[from] color_eyre::eyre::Error),
 }
 
 impl IntoResponse for ApiError {
@@ -61,7 +61,11 @@ impl IntoResponse for ApiError {
             ApiError::ClientError(e) => e.into_response(),
             ApiError::InternalError(e) => {
                 tracing::error!("internal error: {}", e);
-                e.into_response()
+                (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorBody::new("internal error".to_string())),
+                )
+                    .into_response()
             }
         }
     }
@@ -77,20 +81,32 @@ impl From<sqlx::Error> for ApiError {
             sqlx::Error::Database(e) if e.constraint().is_some() => {
                 ApiError::ClientError(ClientError::Conflict)
             }
-            e => ApiError::InternalError(InternalError::SqlxError(e)),
+            e => ApiError::InternalError(e.into()),
         }
     }
 }
 
 impl From<bcrypt::BcryptError> for ApiError {
     fn from(e: bcrypt::BcryptError) -> Self {
-        ApiError::InternalError(InternalError::BcryptError(e))
+        ApiError::InternalError(e.into())
+    }
+}
+
+impl From<lapin::Error> for ApiError {
+    fn from(e: lapin::Error) -> Self {
+        ApiError::InternalError(e.into())
     }
 }
 
 impl From<deadpool_lapin::PoolError> for ApiError {
     fn from(e: deadpool_lapin::PoolError) -> Self {
-        ApiError::InternalError(InternalError::LapinPoolError(e))
+        ApiError::InternalError(e.into())
+    }
+}
+
+impl From<serde_json::Error> for ApiError {
+    fn from(e: serde_json::Error) -> Self {
+        ApiError::InternalError(e.into())
     }
 }
 
@@ -183,56 +199,6 @@ impl IntoResponse for ClientError {
     }
 }
 
-/// An internal error.
-/// The client cannot do anything about this.
-#[derive(Debug, thiserror::Error)]
-pub enum InternalError {
-    /// An [`sqlx`] error.
-    #[error("{0}")]
-    SqlxError(#[from] sqlx::Error),
-    /// An axum extension was not set.
-    #[error("missing extension: {0}")]
-    MissingExtension(String),
-    /// Bcrypt failed to perform some operation.
-    #[error("bcrypt error: {0}")]
-    BcryptError(#[from] bcrypt::BcryptError),
-    /// Reqwest-call failed.
-    #[error("reqwest error: {0}")]
-    ReqwestError(#[from] reqwest::Error),
-    /// Integration error.
-    #[error("integration error: {0}")]
-    IntegrationError(String),
-    /// Lapin error.
-    #[error("lapin error: {0}")]
-    LapinError(#[from] lapin::Error),
-    /// Lapin pool error.
-    #[error("lapin error: {0}")]
-    LapinPoolError(#[from] deadpool_lapin::PoolError),
-    /// Serde json error.
-    #[error("serde json error: {0}")]
-    SerdeJsonError(#[from] serde_json::Error),
-    /// Other miscellaneous errors.
-    #[error("{0}")]
-    Other(String),
-}
-
-impl IntoResponse for InternalError {
-    fn into_response(self) -> axum::response::Response {
-        let status = match self {
-            Self::SqlxError(_) => StatusCode::BAD_GATEWAY,
-            Self::IntegrationError(_) => StatusCode::BAD_GATEWAY,
-            Self::ReqwestError(e) if e.is_timeout() => StatusCode::GATEWAY_TIMEOUT,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-        let mut response =
-            (status, Json(ErrorBody::new("internal error".to_string()))).into_response();
-        response
-            .headers_mut()
-            .insert("Retry-After", HeaderValue::from_static("5"));
-        response
-    }
-}
-
 impl From<ApiError> for Status {
     fn from(e: ApiError) -> Self {
         match e {
@@ -271,6 +237,6 @@ impl ResponseForPanic for PanicHandler {
         &mut self,
         _: Box<dyn std::any::Any + Send + 'static>,
     ) -> http::Response<Self::ResponseBody> {
-        ApiError::InternalError(InternalError::Other("Panic".to_string())).into_response()
+        ApiError::InternalError(anyhow!("panic")).into_response()
     }
 }

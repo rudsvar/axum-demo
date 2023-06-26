@@ -3,6 +3,7 @@
 //! Examples include [`HttpClient`] and [`http_client`] for creating
 //! HTTP clients that automatically log requests.
 
+use color_eyre::eyre::eyre;
 use reqwest::{Client, Request, Response};
 use std::{future::Future, pin::Pin, time::Duration};
 use tower::{Service, ServiceBuilder, ServiceExt};
@@ -11,7 +12,7 @@ use crate::{
     core::request::request_repository::{self, NewRequest},
     infra::{
         database::DbPool,
-        error::{ApiError, ApiResult, InternalError},
+        error::{ApiError, ApiResult},
     },
 };
 
@@ -39,7 +40,7 @@ impl Service<Request> for HttpClient {
         &mut self,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<(), Self::Error>> {
-        let into_api_error = |e| ApiError::InternalError(InternalError::ReqwestError(e));
+        let into_api_error = |e: reqwest::Error| ApiError::InternalError(e.into());
         self.0.poll_ready(cx).map_err(into_api_error)
     }
 
@@ -54,7 +55,7 @@ impl Service<Request> for HttpClient {
                 .url()
                 .host_str()
                 .map(|h| h.to_string())
-                .ok_or_else(|| InternalError::Other("missing host in client".to_string()))?;
+                .ok_or_else(|| eyre!("missing host in client"))?;
             let mut request_body = None;
             if let Some(body) = req.body() {
                 tracing::info!("Request body:\n{:?}", body);
@@ -66,11 +67,14 @@ impl Service<Request> for HttpClient {
             let res = client
                 .call(req)
                 .await
-                .map_err(InternalError::ReqwestError)?;
+                .map_err(|e| ApiError::InternalError(e.into()))?;
             // Get response data
             let status = res.status();
             let headers = res.headers().clone();
-            let bytes = res.bytes().await.map_err(InternalError::ReqwestError)?;
+            let bytes = res
+                .bytes()
+                .await
+                .map_err(|e| ApiError::InternalError(e.into()))?;
             // Log it
             let mut tx = db.begin().await?;
             let new_req = NewRequest {
@@ -100,8 +104,9 @@ impl Service<Request> for HttpClient {
                 Ok(Response::from(res))
             } else {
                 tracing::error!("Received response: {}", status);
-                Err(ApiError::InternalError(InternalError::IntegrationError(
-                    format!("Request with id {} failed", stored_req.id),
+                Err(ApiError::InternalError(eyre!(
+                    "Request with id {} failed",
+                    stored_req.id
                 )))
             }
         })

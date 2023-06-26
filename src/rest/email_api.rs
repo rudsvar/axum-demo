@@ -2,7 +2,7 @@
 
 use crate::infra::{
     config::Config,
-    error::{ApiResult, ClientError, InternalError},
+    error::{ApiError, ApiResult, ClientError},
     extract::Query,
     state::AppState,
 };
@@ -73,7 +73,7 @@ pub async fn send_email(
     tracing::debug!("Construct mailer");
 
     let mailer = SmtpTransport::relay(&config.host)
-        .map_err(|e| InternalError::Other(e.to_string()))?
+        .map_err(|e| ApiError::InternalError(e.into()))?
         .credentials(creds)
         .build();
 
@@ -81,6 +81,6 @@ pub async fn send_email(
 
     mailer
         .send(&email)
-        .map_err(|e| InternalError::Other(e.to_string()))?;
+        .map_err(|e| ApiError::InternalError(e.into()))?;
     Ok(())
 }

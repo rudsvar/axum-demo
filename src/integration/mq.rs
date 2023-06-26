@@ -2,7 +2,7 @@
 
 use crate::infra::{
     config::MqConfig,
-    error::{ApiError, InternalError},
+    error::{ApiError, ApiResult},
 };
 use async_stream::try_stream;
 use deadpool_lapin::{Manager, Pool};
@@ -29,7 +29,7 @@ pub struct MqClient<T> {
 
 impl<T> MqClient<T> {
     /// Creates a new client.
-    pub async fn new(connection: &Connection, queue: String) -> Result<Self, InternalError> {
+    pub async fn new(connection: &Connection, queue: String) -> ApiResult<Self> {
         let channel = connection.create_channel().await?;
         queue_declare(&channel, &queue).await?;
         Ok(Self {
@@ -40,7 +40,7 @@ impl<T> MqClient<T> {
     }
 
     /// Publishes a message to the message queue.
-    pub async fn publish(&self, message: &T) -> Result<Confirmation, InternalError>
+    pub async fn publish(&self, message: &T) -> ApiResult<Confirmation>
     where
         T: Serialize,
     {
@@ -48,7 +48,7 @@ impl<T> MqClient<T> {
     }
 
     /// Consumes a message from the message queue.
-    pub async fn consume_one(&self) -> Result<Option<T>, InternalError>
+    pub async fn consume_one(&self) -> ApiResult<Option<T>>
     where
         T: DeserializeOwned,
     {
@@ -65,16 +65,16 @@ impl<T> MqClient<T> {
 }
 
 /// Establishes a connection to the message queue.
-pub fn init_mq(config: &MqConfig) -> Result<Pool, InternalError> {
+pub fn init_mq(config: &MqConfig) -> ApiResult<Pool> {
     let addr = config.connection_string();
     let manager = Manager::new(addr, ConnectionProperties::default());
     Pool::builder(manager)
         .build()
-        .map_err(|e| InternalError::Other(e.to_string()))
+        .map_err(|e| ApiError::InternalError(e.into()))
 }
 
 /// Declares a new queue.
-pub async fn queue_declare(channel: &Channel, queue: &str) -> Result<Queue, InternalError> {
+pub async fn queue_declare(channel: &Channel, queue: &str) -> ApiResult<Queue> {
     let queue = channel
         .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
         .await?;
@@ -87,7 +87,7 @@ pub async fn publish<T: Serialize>(
     channel: &Channel,
     queue: &str,
     message: &T,
-) -> Result<Confirmation, InternalError> {
+) -> ApiResult<Confirmation> {
     let serialized = serde_json::to_vec(message)?;
     let confirm = channel
         .basic_publish(
@@ -106,7 +106,7 @@ pub async fn publish<T: Serialize>(
 pub async fn consume_one<T: DeserializeOwned>(
     channel: &Channel,
     queue: &str,
-) -> Result<Option<T>, InternalError> {
+) -> ApiResult<Option<T>> {
     let mut consumer = channel
         .basic_consume(
             queue,
