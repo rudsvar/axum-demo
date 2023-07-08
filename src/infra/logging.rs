@@ -12,7 +12,7 @@ pub struct LogGuard {
 
 /// Initializes logging.
 pub fn init_logging() -> LogGuard {
-    let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info,axum_demo=debug".into());
+    let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info,tower_http=trace,axum_demo=debug".into());
 
     let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
     let stdout = tracing_subscriber::fmt::layer()
