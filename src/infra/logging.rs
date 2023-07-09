@@ -12,7 +12,8 @@ pub struct LogGuard {
 
 /// Initializes logging.
 pub fn init_logging() -> LogGuard {
-    let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info,tower_http=trace,axum_demo=debug".into());
+    let log_level = std::env::var("RUST_LOG")
+        .unwrap_or_else(|_| "info,tower_http=trace,axum_demo=debug".into());
 
     let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
     let stdout = tracing_subscriber::fmt::layer()
@@ -24,7 +25,9 @@ pub fn init_logging() -> LogGuard {
         .with_service_name(app_name)
         .install_simple()
         .unwrap();
-    let opentelemetry = tracing_opentelemetry::layer().with_tracer(opentelemetry_tracer).with_filter(EnvFilter::new(log_level));
+    let opentelemetry = tracing_opentelemetry::layer()
+        .with_tracer(opentelemetry_tracer)
+        .with_filter(EnvFilter::new(log_level));
 
     let console_layer = if cfg!(debug_assertions) {
         Some(console_subscriber::spawn())

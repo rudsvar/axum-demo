@@ -3,6 +3,7 @@
 use crate::feature::hello::hello_api;
 use crate::feature::info::info_api;
 use crate::feature::item::item_api;
+use crate::feature::url::url_api;
 use crate::feature::user::user_api;
 use crate::infra::openapi::ApiDoc;
 use crate::{
@@ -48,6 +49,7 @@ pub fn rest_api(state: AppState) -> Router {
         .merge(hello_api::routes())
         .merge(item_api::routes())
         .merge(user_api::routes())
+        .merge(url_api::routes())
         .with_state(state)
         // Layers
         .layer(TimeoutLayer::new(Duration::from_secs(10)))
