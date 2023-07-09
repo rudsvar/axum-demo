@@ -4,7 +4,7 @@
 //! database pool or a preconfigured http client.
 
 use super::{config::Config, database::DbPool};
-use crate::integration::{http::HttpClient, mq::MqPool};
+use crate::integration::http::HttpClient;
 use axum::extract::FromRef;
 
 /// Global application state.
@@ -12,21 +12,15 @@ use axum::extract::FromRef;
 pub struct AppState {
     db: DbPool,
     client: HttpClient,
-    mq: MqPool,
     config: Config,
 }
 
 impl AppState {
     /// Constructs a new [`AppState`].
-    pub fn new(db: DbPool, mq: MqPool, config: Config) -> Self {
+    pub fn new(db: DbPool, config: Config) -> Self {
         let client = reqwest::Client::new();
         let client = HttpClient::new(client, db.clone());
-        Self {
-            db,
-            client,
-            mq,
-            config,
-        }
+        Self { db, client, config }
     }
 
     /// Returns the database pool.
@@ -37,11 +31,6 @@ impl AppState {
     /// Returns the HTTP client.
     pub fn http(&self) -> &HttpClient {
         &self.client
-    }
-
-    /// Returns the MQ connection.
-    pub fn mq(&self) -> &MqPool {
-        &self.mq
     }
 
     /// Returns the application config.

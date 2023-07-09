@@ -12,7 +12,6 @@ use axum::{
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
-use tonic::{Code, Status};
 use tower_http::catch_panic::ResponseForPanic;
 use utoipa::ToSchema;
 
@@ -85,12 +84,6 @@ impl From<sqlx::Error> for ApiError {
 impl From<bcrypt::BcryptError> for ApiError {
     fn from(e: bcrypt::BcryptError) -> Self {
         ApiError::InternalError(InternalError::BcryptError(e))
-    }
-}
-
-impl From<deadpool_lapin::PoolError> for ApiError {
-    fn from(e: deadpool_lapin::PoolError) -> Self {
-        ApiError::InternalError(InternalError::LapinPoolError(e))
     }
 }
 
@@ -202,12 +195,6 @@ pub enum InternalError {
     /// Integration error.
     #[error("integration error: {0}")]
     IntegrationError(String),
-    /// Lapin error.
-    #[error("lapin error: {0}")]
-    LapinError(#[from] lapin::Error),
-    /// Lapin pool error.
-    #[error("lapin error: {0}")]
-    LapinPoolError(#[from] deadpool_lapin::PoolError),
     /// Serde json error.
     #[error("serde json error: {0}")]
     SerdeJsonError(#[from] serde_json::Error),
@@ -230,33 +217,6 @@ impl IntoResponse for InternalError {
             .headers_mut()
             .insert("Retry-After", HeaderValue::from_static("5"));
         response
-    }
-}
-
-impl From<ApiError> for Status {
-    fn from(e: ApiError) -> Self {
-        match e {
-            ApiError::ClientError(e) => match e {
-                ClientError::BadRequest(message) => Status::invalid_argument(message),
-                ClientError::UnsupportedMediaType => {
-                    Status::invalid_argument("unsupported media type")
-                }
-                ClientError::Unauthorized => Status::unauthenticated("unauthenticated"),
-                ClientError::Forbidden => Status::permission_denied("permission denied"),
-                ClientError::NotFound => Status::not_found("resource not found"),
-                ClientError::Conflict => Status::already_exists("resource already exists"),
-                ClientError::UnprocessableEntity(_) => {
-                    Status::invalid_argument("unprocessable entity")
-                }
-                ClientError::Custom(status, message) => {
-                    Status::new(Code::from_i32(status.as_u16() as i32), message)
-                }
-            },
-            ApiError::InternalError(e) => {
-                tracing::error!("request failed: {}", e);
-                Status::internal("internal error")
-            }
-        }
     }
 }
 

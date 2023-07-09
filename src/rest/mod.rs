@@ -1,22 +1,18 @@
 //! REST API implementation.
 
-use crate::graphql::{graphiql, graphql_handler};
 use crate::rest::openapi::ApiDoc;
 use crate::{
-    graphql::{graphql_item_api::QueryRoot, GraphQlData},
     infra::{
         config::Config,
         error::{InternalError, PanicHandler},
         state::AppState,
     },
-    integration::mq::MqPool,
     rest::middleware::{log_request_response, MakeRequestIdSpan},
     shutdown,
 };
-use async_graphql::{EmptyMutation, EmptySubscription, Schema};
-use axum::{
-    error_handling::HandleErrorLayer, response::IntoResponse, routing::get, Extension, Router,
-};
+use axum::response::Redirect;
+use axum::routing::get;
+use axum::{error_handling::HandleErrorLayer, response::IntoResponse, Router};
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
 use std::{iter::once, net::TcpListener, time::Duration};
@@ -25,7 +21,6 @@ use tower_http::{
     catch_panic::CatchPanicLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     sensitive_headers::SetSensitiveRequestHeadersLayer,
-    services::{ServeDir, ServeFile},
     timeout::TimeoutLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
@@ -33,7 +28,6 @@ use tracing::Level;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-pub mod email_api;
 pub mod hello_api;
 pub mod info_api;
 pub mod integration_api;
@@ -60,7 +54,6 @@ pub fn rest_api(state: AppState) -> Router {
         .merge(item_api::routes())
         .merge(user_api::routes())
         .merge(integration_api::routes())
-        .merge(email_api::routes())
         .with_state(state)
         // Layers
         .layer(TimeoutLayer::new(Duration::from_secs(10)))
@@ -83,25 +76,12 @@ pub fn rest_api(state: AppState) -> Router {
 
 /// Constructs the full axum application.
 pub fn app(state: AppState) -> Router {
-    // The GraphQL schema
-    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
-        .data(GraphQlData::new(state.db().clone()))
-        .finish();
-
     // The full application with some top level routes, a GraphQL API, and a REST API.
+    let swagger_path = "/swagger-ui";
     Router::new()
-        // Index
-        .nest_service("/", ServeDir::new("static"))
-        // Docs
-        .nest_service(
-            "/doc",
-            ServeDir::new("doc").not_found_service(ServeFile::new("doc/axum_demo/index.html")),
-        )
-        // GraphQL
-        .route("/graphiql", get(graphiql).post(graphql_handler))
-        .layer(Extension(schema))
+        .route("/", get(|| async { Redirect::permanent(swagger_path) }))
         // Swagger ui
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .merge(SwaggerUi::new(swagger_path).url("/api-doc/openapi.json", ApiDoc::openapi()))
         // API
         .nest("/api", rest_api(state))
 }
@@ -110,16 +90,15 @@ pub fn app(state: AppState) -> Router {
 pub async fn axum_server(
     addr: TcpListener,
     db: PgPool,
-    mq: MqPool,
     config: Config,
 ) -> Result<(), hyper::Error> {
-    let state = AppState::new(db.clone(), mq, config);
+    let state = AppState::new(db.clone(), config);
     let app = app(state);
 
-    tracing::info!("Starting axum on {:?}", addr.local_addr());
+    tracing::info!("Starting axum on {}", addr.local_addr().unwrap());
     axum::Server::from_tcp(addr)?
         .serve(app.into_make_service())
-        .with_graceful_shutdown(shutdown("axum"))
+        .with_graceful_shutdown(shutdown())
         .await
 }
 
@@ -141,15 +120,13 @@ mod tests {
         let listener = TcpListener::bind(format!("{address}:0")).unwrap();
         let port = listener.local_addr().unwrap().port();
         let config = crate::infra::config::load_config().unwrap();
-        let mq = crate::integration::mq::init_mq(&config.mq).unwrap();
-        tokio::spawn(axum_server(listener, db, mq, config));
+        tokio::spawn(axum_server(listener, db, config));
         format!("http://{address}:{port}/api")
     }
 
     fn test_app(db: DbPool) -> Router {
         let config = crate::infra::config::load_config().unwrap();
-        let mq = crate::integration::mq::init_mq(&config.mq).unwrap();
-        let state = AppState::new(db, mq, config);
+        let state = AppState::new(db, config);
         app(state)
     }
 
@@ -278,9 +255,11 @@ mod tests {
     }
 
     #[sqlx::test]
-    fn index_oneshot(db: DbPool) {
+    fn swagger_ui_oneshot(db: DbPool) {
         let app = test_app(db);
-        let req = Request::get("/").body(hyper::Body::empty()).unwrap();
+        let req = Request::get("/swagger-ui/index.html")
+            .body(hyper::Body::empty())
+            .unwrap();
         let result = app.oneshot(req).await.unwrap();
         assert_eq!(StatusCode::OK, result.status())
     }

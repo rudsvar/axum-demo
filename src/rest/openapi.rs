@@ -21,8 +21,6 @@ use utoipa::{
         user_api::user,
         user_api::admin,
         integration_api::remote_items,
-        integration_api::post_to_mq,
-        integration_api::read_from_mq,
     ),
     components(
         schemas(
@@ -30,7 +28,6 @@ use utoipa::{
             hello_api::Greeting,
             item_repository::NewItem,
             item_repository::Item,
-            integration_api::Message,
             crate::infra::error::ErrorBody
         )
     ),

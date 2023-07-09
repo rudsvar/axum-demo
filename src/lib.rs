@@ -21,16 +21,14 @@
 //! When the application is up and running, visit `localhost:8080`.
 
 pub mod core;
-pub mod graphql;
-pub mod grpc;
 pub mod infra;
 pub mod integration;
 pub mod rest;
 
 /// Completes when when ctrl-c is pressed.
-pub(crate) async fn shutdown(name: &str) {
+pub(crate) async fn shutdown() {
     if let Err(e) = tokio::signal::ctrl_c().await {
         tracing::error!("Failed to fetch ctrl_c: {}", e);
     }
-    tracing::info!("{} shutting down", name);
+    tracing::info!("Shutting down");
 }
