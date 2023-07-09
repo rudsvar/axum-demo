@@ -25,7 +25,7 @@ impl<B> MakeSpan<B> for MakeRequestIdSpan {
             .expect("request id not set")
             .to_str()
             .expect("invalid request id");
-        tracing::trace_span!(
+        tracing::info_span!(
             "request",
             request_id = request_id,
             method = %request.method(),
