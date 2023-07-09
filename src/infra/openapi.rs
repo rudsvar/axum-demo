@@ -34,8 +34,8 @@ use utoipa::{
             hello_api::Greeting,
             item_repository::NewItem,
             item_repository::Item,
-            url_repository::NewUrl,
-            url_repository::Url,
+            url_repository::NewShortUrl,
+            url_repository::ShortUrl,
             crate::infra::error::ErrorBody
         )
     ),

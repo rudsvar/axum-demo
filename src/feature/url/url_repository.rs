@@ -15,7 +15,7 @@ use validator::Validate;
 
 /// A new URL to shorten.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
-pub struct NewUrl {
+pub struct NewShortUrl {
     /// The name of the shortened URL.
     #[schema(example = "example")]
     #[validate(length(min = 1))]
@@ -23,21 +23,21 @@ pub struct NewUrl {
     /// The URL to shorten.
     #[schema(example = "https://example.com")]
     #[serde(with = "http_serde::uri")]
-    pub url: Uri,
+    pub target: Uri,
 }
 
 /// An existing shortened URL.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct Url {
+pub struct ShortUrl {
     /// The URL's id.
     #[schema(example = "1")]
     pub id: i32,
     /// The name of the shortened URL.
     #[schema(example = "example")]
     pub name: String,
-    /// The URL to shorten.
+    /// The URL to redirect to.
     #[schema(example = "https://example.com")]
-    pub url: String,
+    pub target: String,
     /// The user who created the URL.
     #[schema(example = "1")]
     pub created_by: i32,
@@ -48,18 +48,22 @@ pub struct Url {
 
 /// Shortens a new URL.
 #[instrument(skip(tx))]
-pub async fn create_url<R>(tx: &mut Tx, new_url: Valid<NewUrl>, user: User<R>) -> ApiResult<Url> {
+pub async fn create_url<R>(
+    tx: &mut Tx,
+    new_url: Valid<NewShortUrl>,
+    user: User<R>,
+) -> ApiResult<ShortUrl> {
     let new_item = new_url.into_inner();
     tracing::info!("Creating url {:?}", new_item);
     let url = sqlx::query_as!(
-        Url,
+        ShortUrl,
         r#"
-        INSERT INTO urls (name, url, created_by)
+        INSERT INTO short_urls (name, target, created_by)
         VALUES ($1, $2, $3)
         RETURNING *
         "#,
         new_item.name,
-        new_item.url.to_string(),
+        new_item.target.to_string(),
         user.id()
     )
     .fetch_one(tx)
@@ -70,12 +74,12 @@ pub async fn create_url<R>(tx: &mut Tx, new_url: Valid<NewUrl>, user: User<R>) -
 
 /// Read a shortened URL.
 #[instrument(skip(tx))]
-pub async fn fetch_url(tx: &mut Tx, name: &str) -> ApiResult<Option<Url>> {
+pub async fn fetch_url(tx: &mut Tx, name: &str) -> ApiResult<Option<ShortUrl>> {
     tracing::info!("Reading url");
     let item = sqlx::query_as!(
-        Url,
+        ShortUrl,
         r#"
-        SELECT * FROM urls
+        SELECT * FROM short_urls
         WHERE name = $1
         "#,
         name
@@ -94,7 +98,7 @@ pub async fn delete_url<R>(tx: &mut Tx, name: &str, user: User<R>) -> ApiResult<
     let rows = sqlx::query_as!(
         Item,
         r#"
-        DELETE FROM urls
+        DELETE FROM short_urls
         WHERE name = $1 AND created_by = $2
         "#,
         name,
@@ -115,12 +119,12 @@ pub async fn delete_url<R>(tx: &mut Tx, name: &str, user: User<R>) -> ApiResult<
 
 /// Lists all items.
 #[instrument(skip(tx))]
-pub async fn list_items<R>(tx: &mut Tx, user: User<R>) -> ApiResult<Vec<Url>> {
+pub async fn list_items<R>(tx: &mut Tx, user: User<R>) -> ApiResult<Vec<ShortUrl>> {
     tracing::info!("Listing urls");
     let items = sqlx::query_as!(
-        Url,
+        ShortUrl,
         r#"
-        SELECT * FROM urls WHERE created_by = $1
+        SELECT * FROM short_urls WHERE created_by = $1
         "#,
         user.id(),
     )

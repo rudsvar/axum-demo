@@ -14,7 +14,7 @@ use http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
 use serde::Deserialize;
 use tracing::instrument;
 
-use super::url_repository::{self, NewUrl, Url};
+use super::url_repository::{self, NewShortUrl, ShortUrl};
 
 /// The url API endpoints.
 pub fn routes() -> Router<AppState> {
@@ -39,7 +39,7 @@ struct UrlsId(String);
     path = "/api/urls",
     request_body = NewItem,
     responses(
-        (status = 201, description = "Created", body = Url),
+        (status = 201, description = "Created", body = ShortUrl),
         (status = 409, description = "Conflict", body = ErrorBody),
         (status = 500, description = "Internal Server Error", body = ErrorBody),
     ),
@@ -52,8 +52,8 @@ async fn create_url(
     Urls: Urls,
     db: State<DbPool>,
     user: User,
-    Json(new_url): Json<NewUrl>,
-) -> ApiResult<(StatusCode, Json<Url>)> {
+    Json(new_url): Json<NewShortUrl>,
+) -> ApiResult<(StatusCode, Json<ShortUrl>)> {
     let new_url = Valid::new(new_url)?;
     let mut tx = db.begin().await?;
     let url = url_repository::create_url(&mut tx, new_url, user).await?;
@@ -66,7 +66,7 @@ async fn create_url(
     get,
     path = "/api/urls/{name}",
     responses(
-        (status = 303, description = "See Other", body = Url),
+        (status = 303, description = "See Other", body = ShortUrl),
         (status = 404, description = "Not Found", body = ErrorBody),
         (status = 500, description = "Internal Server Error", body = ErrorBody),
     )
@@ -75,7 +75,7 @@ async fn create_url(
 async fn visit_url(
     UrlsId(name): UrlsId,
     db: State<DbPool>,
-) -> ApiResult<(StatusCode, HeaderMap, Json<Url>)> {
+) -> ApiResult<(StatusCode, HeaderMap, Json<ShortUrl>)> {
     let mut tx = db.begin().await?;
     let url = url_repository::fetch_url(&mut tx, &name)
         .await?
@@ -84,7 +84,7 @@ async fn visit_url(
     let mut hm = HeaderMap::new();
     hm.append(
         HeaderName::from_static("location"),
-        HeaderValue::from_str(&url.url).expect("invalid url"),
+        HeaderValue::from_str(&url.target).expect("invalid url"),
     );
     Ok((StatusCode::SEE_OTHER, hm, Json(url)))
 }
@@ -94,7 +94,7 @@ async fn visit_url(
     delete,
     path = "/api/urls/{id}",
     responses(
-        (status = 200, description = "Ok", body = Url),
+        (status = 200, description = "Ok", body = ShortUrl),
         (status = 404, description = "Not Found", body = ErrorBody),
         (status = 500, description = "Internal Server Error", body = ErrorBody),
     ),
@@ -123,7 +123,7 @@ async fn delete_url(UrlsId(id): UrlsId, db: State<DbPool>, user: User) -> ApiRes
     )
 )]
 #[instrument(skip_all)]
-async fn list_urls(Urls: Urls, db: State<DbPool>, user: User) -> ApiResult<Json<Vec<Url>>> {
+async fn list_urls(Urls: Urls, db: State<DbPool>, user: User) -> ApiResult<Json<Vec<ShortUrl>>> {
     let mut tx = db.begin().await?;
     let urls = url_repository::list_items(&mut tx, user).await?;
     Ok(Json(urls))

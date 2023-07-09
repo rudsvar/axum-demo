@@ -114,6 +114,7 @@ mod tests {
         infra::{database::DbPool, error::ErrorBody, state::AppState},
     };
     use axum::Router;
+    use base64::Engine;
     use http::{Request, StatusCode};
     use serde::Deserialize;
     use std::net::TcpListener;
@@ -292,5 +293,28 @@ mod tests {
         let body = hyper::body::to_bytes(res.into_body()).await.unwrap();
         let greeting: Greeting = serde_json::from_slice(&body).unwrap();
         assert_eq!(Greeting::new("Hello, There!".to_string()), greeting)
+    }
+
+    #[sqlx::test]
+    fn shorten_url(db: DbPool) {
+        let app = test_app(db);
+
+        // Shorten a new URL
+        let auth = base64::engine::general_purpose::STANDARD.encode("user:user");
+        let req = Request::post("/api/urls")
+            .header("Authorization", format!("Basic {}", &auth))
+            .header("Content-Type", "application/json")
+            .body(r#"{"name": "example", "target": "https://example.com/"}"#.into())
+            .unwrap();
+        let res = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::CREATED, res.status());
+
+        // Visits the shortened URL
+        let req = Request::get("/api/urls/example")
+            .body(hyper::Body::empty())
+            .unwrap();
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::SEE_OTHER, res.status());
+        assert_eq!("https://example.com/", res.headers()["location"]);
     }
 }
