@@ -1,7 +1,7 @@
 //! Implementation of the greeting API. An API that returns a greeting based on a query parameter.
 
 use crate::{
-    core::greeting::greeting_service,
+    feature::hello::hello_service,
     infra::{
         extract::{Json, Query},
         state::AppState,
@@ -62,17 +62,13 @@ impl Greeting {
 pub async fn hello(Query(params): Query<GreetingParams>) -> Json<Greeting> {
     let name = params.name.as_deref().unwrap_or("World");
     Json(Greeting {
-        greeting: greeting_service::greet(name),
+        greeting: hello_service::hello(name),
     })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Greeting;
-    use crate::{
-        infra::extract::Query,
-        rest::hello_api::{hello, GreetingParams},
-    };
+    use super::*;
 
     #[sqlx::test]
     async fn hello_without_name_defaults_to_world() {

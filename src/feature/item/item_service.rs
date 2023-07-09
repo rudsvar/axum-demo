@@ -1,7 +1,7 @@
 //! A service for interacting with items.
 
 use crate::{
-    core::item::item_repository::{self, Item, NewItem},
+    feature::item::item_repository::{self, Item, NewItem},
     infra::{
         database::{DbConnection, Tx},
         error::ApiResult,

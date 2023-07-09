@@ -4,7 +4,7 @@
 //! database pool or a preconfigured http client.
 
 use super::{config::Config, database::DbPool};
-use crate::integration::http::HttpClient;
+use crate::infra::http::HttpClient;
 use axum::extract::FromRef;
 
 /// Global application state.

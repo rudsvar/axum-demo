@@ -1,7 +1,7 @@
 //! OpenAPI configuration.
 
-use super::{hello_api, info_api, integration_api, item_api, user_api};
-use crate::core::item::item_repository;
+use crate::feature::item::item_repository;
+use crate::feature::{hello::hello_api, info::info_api, item::item_api, user::user_api};
 use utoipa::{
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
     Modify, OpenApi,
@@ -20,7 +20,6 @@ use utoipa::{
         item_api::stream_items,
         user_api::user,
         user_api::admin,
-        integration_api::remote_items,
     ),
     components(
         schemas(

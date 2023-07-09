@@ -1,14 +1,17 @@
 //! REST API implementation.
 
-use crate::rest::openapi::ApiDoc;
+use crate::feature::hello::hello_api;
+use crate::feature::info::info_api;
+use crate::feature::item::item_api;
+use crate::feature::user::user_api;
+use crate::infra::openapi::ApiDoc;
 use crate::{
+    infra::middleware::{log_request_response, MakeRequestIdSpan},
     infra::{
         config::Config,
         error::{InternalError, PanicHandler},
         state::AppState,
     },
-    rest::middleware::{log_request_response, MakeRequestIdSpan},
-    shutdown,
 };
 use axum::response::Redirect;
 use axum::routing::get;
@@ -28,14 +31,6 @@ use tracing::Level;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-pub mod hello_api;
-pub mod info_api;
-pub mod integration_api;
-pub mod item_api;
-pub mod middleware;
-pub mod openapi;
-pub mod user_api;
-
 /// Constructs the full REST API including middleware.
 pub fn rest_api(state: AppState) -> Router {
     let db = state.db().clone();
@@ -53,7 +48,6 @@ pub fn rest_api(state: AppState) -> Router {
         .merge(hello_api::routes())
         .merge(item_api::routes())
         .merge(user_api::routes())
-        .merge(integration_api::routes())
         .with_state(state)
         // Layers
         .layer(TimeoutLayer::new(Duration::from_secs(10)))
@@ -102,12 +96,20 @@ pub async fn axum_server(
         .await
 }
 
+/// Completes when when ctrl-c is pressed.
+pub(crate) async fn shutdown() {
+    if let Err(e) = tokio::signal::ctrl_c().await {
+        tracing::error!("Failed to fetch ctrl_c: {}", e);
+    }
+    tracing::info!("Shutting down");
+}
+
 #[cfg(test)]
 mod tests {
     use super::{app, axum_server};
     use crate::{
+        feature::hello::hello_api::Greeting,
         infra::{database::DbPool, error::ErrorBody, state::AppState},
-        rest::hello_api::Greeting,
     };
     use axum::Router;
     use http::{Request, StatusCode};

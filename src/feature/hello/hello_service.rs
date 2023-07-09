@@ -4,6 +4,6 @@ use tracing::instrument;
 
 /// Returns a greeting based on someone's name.
 #[instrument(ret)]
-pub fn greet(name: &str) -> String {
+pub fn hello(name: &str) -> String {
     format!("Hello, {name}!")
 }

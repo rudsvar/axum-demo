@@ -1,9 +1,6 @@
 //! An example web service with axum.
 
-use axum_demo::{
-    infra::{self},
-    rest,
-};
+use axum_demo::infra::{self};
 use sqlx::migrate::Migrator;
 use std::{net::TcpListener, time::Duration};
 
@@ -32,7 +29,7 @@ async fn main() -> color_eyre::Result<()> {
         "{}:{}",
         config.server.http_address, config.server.http_port
     ))?;
-    rest::axum_server(listener, db.clone(), config.clone()).await?;
+    axum_demo::server::axum_server(listener, db.clone(), config.clone()).await?;
 
     Ok(())
 }
