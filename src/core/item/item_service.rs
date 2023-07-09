@@ -43,6 +43,7 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
 }
 
 /// Streams all items.
+#[allow(clippy::let_with_type_underscore)]
 #[instrument(skip(conn))]
 pub fn stream_items(conn: DbConnection, throttle: Duration) -> impl Stream<Item = ApiResult<Item>> {
     item_repository::stream_items(conn, throttle)

@@ -143,6 +143,7 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
 }
 
 /// Streams all items.
+#[allow(clippy::let_with_type_underscore)]
 #[instrument(skip(conn))]
 pub fn stream_items(
     mut conn: DbConnection,
