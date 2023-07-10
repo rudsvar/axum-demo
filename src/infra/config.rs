@@ -10,10 +10,6 @@ pub struct Config {
     pub server: ServerConfig,
     /// Database configuration.
     pub database: DatabaseConfig,
-    /// Message queue configuration.
-    pub mq: MqConfig,
-    /// Email configuration.
-    pub email: EmailConfig,
 }
 
 /// Server configuration.
@@ -41,40 +37,6 @@ pub struct DatabaseConfig {
     /// The database name.
     pub database_name: String,
     /// The database host.
-    pub host: String,
-}
-
-/// Message queue configuration.
-#[derive(Clone, Debug, Deserialize)]
-pub struct MqConfig {
-    /// The message queue username.
-    pub username: String,
-    /// The message queue password.
-    pub password: String,
-    /// The message queue host.
-    pub host: String,
-    /// The message queue port.
-    pub port: u16,
-}
-
-impl MqConfig {
-    /// Constructs a connection string.
-    pub fn connection_string(&self) -> String {
-        format!(
-            "amqp://{}:{}@{}:{}",
-            self.username, self.password, self.host, self.port
-        )
-    }
-}
-
-/// Email configuration
-#[derive(Clone, Debug, Deserialize)]
-pub struct EmailConfig {
-    /// The email username.
-    pub username: String,
-    /// The email password.
-    pub password: String,
-    /// The email host.
     pub host: String,
 }
 
