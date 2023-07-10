@@ -19,7 +19,7 @@
 //! ```rust
 //! # use axum_demo::feature::hello::hello_api::Greeting;
 //! # tokio_test::block_on(async {
-//! #    let url = axum_demo::server::spawn_app().await;
+//! # let url = axum_demo::server::spawn_app().await;
 //! let response = reqwest::get(format!("{}/hello?name=Foo", url)).await.unwrap();
 //! assert_eq!(200, response.status());
 //! assert_eq!(Greeting::new("Hello, Foo!".to_string()), response.json::<Greeting>().await.unwrap());
@@ -31,6 +31,7 @@ use crate::feature::info::info_api;
 use crate::feature::item::item_api;
 use crate::feature::url::url_api;
 use crate::feature::user::user_api;
+use crate::infra::database::DbPool;
 use crate::infra::openapi::ApiDoc;
 use crate::{
     infra::middleware::{log_request_response, MakeRequestIdSpan},
@@ -109,11 +110,7 @@ pub fn app(state: AppState) -> Router {
 }
 
 /// Starts the axum server.
-pub async fn axum_server(
-    addr: TcpListener,
-    db: PgPool,
-    config: Config,
-) -> Result<(), hyper::Error> {
+pub async fn run_app(addr: TcpListener, db: PgPool, config: Config) -> Result<(), hyper::Error> {
     let state = AppState::new(db.clone(), config);
     let app = app(state);
 
@@ -132,9 +129,26 @@ pub(crate) async fn shutdown() {
     tracing::info!("Shutting down");
 }
 
+/// Spawn a server on a random port.
+pub async fn spawn_app() -> String {
+    let config = crate::infra::config::load_config().unwrap();
+    let db = crate::infra::database::init_db(&config.database);
+    spawn_app_with_db(db).await
+}
+
+/// Spawn a server on a random port with a custom database.
+pub async fn spawn_app_with_db(db: DbPool) -> String {
+    let address = "127.0.0.1";
+    let listener = TcpListener::bind(format!("{address}:0")).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let config = crate::infra::config::load_config().unwrap();
+    tokio::spawn(run_app(listener, db, config));
+    format!("http://{address}:{port}/api")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{app, axum_server};
+    use super::*;
     use crate::{
         feature::hello::hello_api::Greeting,
         infra::{database::DbPool, error::ErrorBody, state::AppState},
@@ -143,17 +157,7 @@ mod tests {
     use base64::Engine;
     use http::{Request, StatusCode};
     use serde::Deserialize;
-    use std::net::TcpListener;
     use tower::ServiceExt;
-
-    async fn spawn_server(db: DbPool) -> String {
-        let address = "127.0.0.1";
-        let listener = TcpListener::bind(format!("{address}:0")).unwrap();
-        let port = listener.local_addr().unwrap().port();
-        let config = crate::infra::config::load_config().unwrap();
-        tokio::spawn(axum_server(listener, db, config));
-        format!("http://{address}:{port}/api")
-    }
 
     fn test_app(db: DbPool) -> Router {
         let config = crate::infra::config::load_config().unwrap();
@@ -168,14 +172,14 @@ mod tests {
 
     #[sqlx::test]
     fn hello_gives_correct_response(db: DbPool) {
-        let url = spawn_server(db).await;
+        let url = spawn_app_with_db(db).await;
         let response: Greeting = get(&format!("{url}/hello?name=World")).await;
         assert_eq!("Hello, World!", response.greeting());
     }
 
     #[sqlx::test]
     fn non_user_cannot_sign_in(db: DbPool) {
-        let url = spawn_server(db).await;
+        let url = spawn_app_with_db(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: ErrorBody = client
             .get(&format!("{url}/user"))
@@ -191,7 +195,7 @@ mod tests {
 
     #[sqlx::test]
     fn user_can_access_user_endpoint(db: DbPool) {
-        let url = spawn_server(db).await;
+        let url = spawn_app_with_db(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: i32 = client
             .get(&format!("{url}/user"))
@@ -207,7 +211,7 @@ mod tests {
 
     #[sqlx::test]
     fn user_with_wrong_password_gives_401(db: DbPool) {
-        let url = spawn_server(db).await;
+        let url = spawn_app_with_db(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: ErrorBody = client
             .get(&format!("{url}/user"))
@@ -223,7 +227,7 @@ mod tests {
 
     #[sqlx::test]
     fn user_cannot_access_admin_endpoint(db: DbPool) {
-        let url = spawn_server(db).await;
+        let url = spawn_app_with_db(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: ErrorBody = client
             .get(&format!("{url}/admin"))
@@ -239,7 +243,7 @@ mod tests {
 
     #[sqlx::test]
     fn admin_can_access_admin_endpoint(db: DbPool) {
-        let url = spawn_server(db).await;
+        let url = spawn_app_with_db(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: i32 = client
             .get(&format!("{url}/admin"))
@@ -255,7 +259,7 @@ mod tests {
 
     #[sqlx::test]
     fn admin_can_access_user_endpoint(db: DbPool) {
-        let url = spawn_server(db).await;
+        let url = spawn_app_with_db(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: i32 = client
             .get(&format!("{url}/user"))
@@ -271,7 +275,7 @@ mod tests {
 
     #[sqlx::test]
     fn admin_with_wrong_password_gives_401(db: DbPool) {
-        let url = spawn_server(db).await;
+        let url = spawn_app_with_db(db).await;
         let client = reqwest::ClientBuilder::default().build().unwrap();
         let response: ErrorBody = client
             .get(&format!("{url}/admin"))

@@ -29,7 +29,7 @@ async fn main() -> color_eyre::Result<()> {
         "{}:{}",
         config.server.http_address, config.server.http_port
     ))?;
-    axum_demo::server::axum_server(listener, db.clone(), config.clone()).await?;
+    axum_demo::server::run_app(listener, db.clone(), config.clone()).await?;
 
     Ok(())
 }
