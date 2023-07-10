@@ -1,4 +1,30 @@
 //! REST API implementation.
+//!
+//! # Examples
+//!
+//! Hello API.
+//!
+//! ```rust
+//! # use axum_demo::feature::hello::hello_api::Greeting;
+//! # tokio_test::block_on(async {
+//! # let url = axum_demo::server::spawn_app().await;
+//! let response = reqwest::get(format!("{}/hello", url)).await.unwrap();
+//! assert_eq!(200, response.status());
+//! assert_eq!(Greeting::new("Hello, World!".to_string()), response.json::<Greeting>().await.unwrap());
+//! # });
+//! ```
+//!
+//! Hello API with name.
+//!
+//! ```rust
+//! # use axum_demo::feature::hello::hello_api::Greeting;
+//! # tokio_test::block_on(async {
+//! #    let url = axum_demo::server::spawn_app().await;
+//! let response = reqwest::get(format!("{}/hello?name=Foo", url)).await.unwrap();
+//! assert_eq!(200, response.status());
+//! assert_eq!(Greeting::new("Hello, Foo!".to_string()), response.json::<Greeting>().await.unwrap());
+//! # });
+//! ```
 
 use crate::feature::hello::hello_api;
 use crate::feature::info::info_api;

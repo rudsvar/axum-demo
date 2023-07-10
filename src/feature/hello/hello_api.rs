@@ -34,7 +34,7 @@ impl Debug for GreetingParams {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct Greeting {
     /// A personal greeting.
-    greeting: String,
+    pub greeting: String,
 }
 
 impl Greeting {
