@@ -2,8 +2,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "**" ]
   release:
     types: [ published ]
 
@@ -39,14 +38,14 @@ jobs:
         run: sudo apt-get install -y protobuf-compiler
 
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+          components: clippy, rustfmt
 
       - uses: Swatinem/rust-cache@v2
+
+      - name: Check fmt
+        run: cargo fmt --check
 
       - name: Install sqlx-cli
         uses: actions-rs/cargo@v1
@@ -58,12 +57,6 @@ jobs:
             --features=postgres,rustls
             --no-default-features
             --locked
-
-      - name: Check fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --check
 
       - name: Set up database
         run: sqlx database setup
