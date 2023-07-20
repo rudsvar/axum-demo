@@ -48,14 +48,11 @@ jobs:
         run: cargo fmt --check
 
       - name: Install sqlx-cli
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: >
-            sqlx-cli
-            --version=${{ env.SQLX_VERSION }}
-            --features=postgres,rustls
-            --no-default-features
+        run: |
+          cargo install sqlx-cli \
+            --version=${{ env.SQLX_VERSION }} \
+            --features=postgres,rustls \
+            --no-default-features \
             --locked
 
       - name: Set up database
@@ -65,9 +62,7 @@ jobs:
         run: cargo sqlx prepare --check -- --lib
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: cargo test
 
   deploy:
     if: github.ref == 'refs/heads/main' && false
