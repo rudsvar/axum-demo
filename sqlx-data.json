@@ -44,6 +44,50 @@
     },
     "query": "\n        SELECT id, password, role FROM users\n        WHERE username = $1\n        "
   },
+  "251d19757d7125907521c68701b29fb85ab0a53532b9e9b204695dad19d4a9a8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "target",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_by",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "\n        SELECT * FROM short_urls\n        WHERE name = $1\n        "
+  },
   "467dcd7fd379750cbf30a190d06dc1b3e61b1bd7ef288fbf6fbedec52c276434": {
     "describe": {
       "columns": [
@@ -74,6 +118,52 @@
     },
     "query": "SELECT * FROM items"
   },
+  "529e1ea3c6faa9e9a5403c9339b3623ac735ba0552f6e7d68051b697ae8d8118": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "target",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_by",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n        INSERT INTO short_urls (name, target, created_by)\n        VALUES ($1, $2, $3)\n        RETURNING *\n        "
+  },
   "5a60991465690584b3d674778a542d040e398dc211bcb2cf8a65a7ce9d654c02": {
     "describe": {
       "columns": [
@@ -103,6 +193,63 @@
       }
     },
     "query": "\n        SELECT * FROM items\n        "
+  },
+  "5b344988366ad66da47c45379ac3dde98f6a0026df7b32ab93dfd31a8434afa7": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "target",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_by",
+          "ordinal": 3,
+          "type_info": "Int4"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n        SELECT * FROM short_urls WHERE created_by = $1\n        "
+  },
+  "63419e45c428d49eaa66cdb6ebae2e409bc622e7d06b2582cffa3077cb2d7f02": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int4"
+        ]
+      }
+    },
+    "query": "\n        DELETE FROM short_urls\n        WHERE name = $1 AND created_by = $2\n        "
   },
   "865176b8fe008839001253735e992c065fa09841956a317696b9eb27d3c555e9": {
     "describe": {
