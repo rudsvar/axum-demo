@@ -11,7 +11,7 @@ debug = true
 [dependencies]
 
 # Web
-axum = { version = "0.6.18", features = ["headers", "macros"] }
+axum = { version = "0.6.19", features = ["headers", "macros"] }
 axum-extra = { version = "0.7.5", features = ["typed-routing", "json-lines"] }
 tower = { version = "0.4.13", features = ["retry"] }
 tower-http = { version = "0.4.0", features = [
