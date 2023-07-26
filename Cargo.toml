@@ -77,7 +77,7 @@ opentelemetry = { version = "0.19.0", default-features = false, features = [
 config = "0.13.2"
 uuid = { version = "1.4.1", features = ["v4"] }
 bcrypt = "0.15.0"
-thiserror = "1.0.37"
+thiserror = "1.0.40"
 color-eyre = "0.6.2"
 chrono = { version = "0.4.23", default-features = false, features = ["serde"] }
 cached = "0.44.0"
