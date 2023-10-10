@@ -5,6 +5,7 @@ use crate::{
     infra::{
         database::{DbConnection, Tx},
         error::ApiResult,
+        pagination::PaginationParams,
         validation::Valid,
     },
 };
@@ -38,8 +39,8 @@ pub async fn delete_item(tx: &mut Tx, id: i32) -> ApiResult<()> {
 
 /// Lists all items.
 #[instrument(skip(tx))]
-pub async fn list_items(tx: &mut Tx, page: i64, page_size: i64) -> ApiResult<Vec<Item>> {
-    item_repository::list_items(tx, page, page_size).await
+pub async fn list_items(tx: &mut Tx, params: &PaginationParams) -> ApiResult<Vec<Item>> {
+    item_repository::list_items(tx, params).await
 }
 
 /// Streams all items.

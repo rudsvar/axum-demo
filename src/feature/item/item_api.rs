@@ -9,6 +9,7 @@ use crate::{
         database::DbPool,
         error::{ApiError, ApiResult, ClientError},
         extract::{Json, Query},
+        pagination::PaginationParams,
         state::AppState,
         validation::Valid,
     },
@@ -135,21 +136,11 @@ async fn delete_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<Statu
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Options for how to list.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, IntoParams)]
-#[serde(rename_all = "camelCase")]
-pub struct ListParams {
-    /// The 0-indexed page to fetch.
-    page: Option<i64>,
-    /// The number of elements per page.
-    page_size: Option<i64>,
-}
-
 /// Lists all items.
 #[utoipa::path(
     get,
     path = "/api/items",
-    params(ListParams),
+    params(PaginationParams),
     responses(
         (status = 200, description = "Success", body = [Item]),
         (status = 500, description = "Internal error", body = ErrorBody),
@@ -159,12 +150,10 @@ pub struct ListParams {
 async fn list_items(
     Items: Items,
     db: State<DbPool>,
-    Query(params): Query<ListParams>,
+    Query(params): Query<PaginationParams>,
 ) -> ApiResult<Json<Vec<Item>>> {
     let mut tx = db.begin().await?;
-    let page = params.page.unwrap_or(0);
-    let page_size = params.page_size.unwrap_or(50);
-    let items = item_service::list_items(&mut tx, page, page_size).await?;
+    let items = item_service::list_items(&mut tx, &params).await?;
     Ok(Json(items))
 }
 

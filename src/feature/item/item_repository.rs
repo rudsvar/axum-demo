@@ -3,6 +3,7 @@
 use crate::infra::{
     database::{DbConnection, Tx},
     error::{ApiResult, ClientError},
+    pagination::PaginationParams,
     validation::Valid,
 };
 use async_stream::try_stream;
@@ -127,7 +128,7 @@ pub async fn delete_item(tx: &mut Tx, id: i32) -> ApiResult<()> {
 
 /// Lists all items.
 #[instrument(skip(tx))]
-pub async fn list_items(tx: &mut Tx, page: i64, page_size: i64) -> ApiResult<Vec<Item>> {
+pub async fn list_items(tx: &mut Tx, params: &PaginationParams) -> ApiResult<Vec<Item>> {
     tracing::info!("Listing items");
     let items = sqlx::query_as!(
         Item,
@@ -136,8 +137,8 @@ pub async fn list_items(tx: &mut Tx, page: i64, page_size: i64) -> ApiResult<Vec
         LIMIT $1
         OFFSET $2
         "#,
-        page_size,
-        page * page_size
+        params.limit(),
+        params.offset()
     )
     .fetch_all(tx.as_mut())
     .instrument(tracing::info_span!("fetch_all"))
@@ -169,6 +170,8 @@ pub fn stream_items(
 
 #[cfg(test)]
 mod tests {
+    use crate::infra::pagination::PaginationParams;
+
     use super::*;
     use sqlx::PgPool;
 
@@ -195,7 +198,9 @@ mod tests {
             item,
         );
 
-        let items = list_items(&mut tx, 0, 1).await.unwrap();
+        let items = list_items(&mut tx, &PaginationParams::default())
+            .await
+            .unwrap();
         assert_eq!(&item, items.last().unwrap());
     }
 }
