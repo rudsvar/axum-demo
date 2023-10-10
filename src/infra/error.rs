@@ -89,15 +89,15 @@ impl From<bcrypt::BcryptError> for ApiError {
 
 impl From<validator::ValidationErrors> for ApiError {
     fn from(e: validator::ValidationErrors) -> Self {
-        let invalid_fields: String = e
-            .field_errors()
-            .into_iter()
-            .map(|(k, v)| {
-                let codes: String = v.iter().map(|e| format!("{},", e.code)).collect();
-                let codes = codes.trim_end_matches(',');
-                format!("{k} ({codes}),")
-            })
-            .collect();
+        let mut invalid_fields = String::new();
+        for (k, v) in e.field_errors() {
+            let mut codes = String::new();
+            for e in v {
+                codes += &format!("{},", e.code);
+            }
+            let codes = codes.trim_end_matches(',');
+            invalid_fields += &format!("{k} ({codes}),");
+        }
         let invalid_fields = invalid_fields.trim_end_matches(',');
         ApiError::ClientError(ClientError::UnprocessableEntity(format!(
             "invalid field(s): {invalid_fields}"
