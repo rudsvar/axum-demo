@@ -38,8 +38,8 @@ pub async fn delete_item(tx: &mut Tx, id: i32) -> ApiResult<()> {
 
 /// Lists all items.
 #[instrument(skip(tx))]
-pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
-    item_repository::list_items(tx).await
+pub async fn list_items(tx: &mut Tx, page: i64, page_size: i64) -> ApiResult<Vec<Item>> {
+    item_repository::list_items(tx, page, page_size).await
 }
 
 /// Streams all items.

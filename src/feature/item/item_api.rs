@@ -135,19 +135,36 @@ async fn delete_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<Statu
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Options for how to list.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, IntoParams)]
+#[serde(rename_all = "camelCase")]
+pub struct ListParams {
+    /// The 0-indexed page to fetch.
+    page: Option<i64>,
+    /// The number of elements per page.
+    page_size: Option<i64>,
+}
+
 /// Lists all items.
 #[utoipa::path(
     get,
     path = "/api/items",
+    params(ListParams),
     responses(
         (status = 200, description = "Success", body = [Item]),
         (status = 500, description = "Internal error", body = ErrorBody),
     )
 )]
 #[instrument(skip_all)]
-async fn list_items(Items: Items, db: State<DbPool>) -> ApiResult<Json<Vec<Item>>> {
+async fn list_items(
+    Items: Items,
+    db: State<DbPool>,
+    Query(params): Query<ListParams>,
+) -> ApiResult<Json<Vec<Item>>> {
     let mut tx = db.begin().await?;
-    let items = item_service::list_items(&mut tx).await?;
+    let page = params.page.unwrap_or(0);
+    let page_size = params.page_size.unwrap_or(50);
+    let items = item_service::list_items(&mut tx, page, page_size).await?;
     Ok(Json(items))
 }
 

@@ -127,13 +127,17 @@ pub async fn delete_item(tx: &mut Tx, id: i32) -> ApiResult<()> {
 
 /// Lists all items.
 #[instrument(skip(tx))]
-pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
+pub async fn list_items(tx: &mut Tx, page: i64, page_size: i64) -> ApiResult<Vec<Item>> {
     tracing::info!("Listing items");
     let items = sqlx::query_as!(
         Item,
         r#"
         SELECT * FROM items
-        "#
+        LIMIT $1
+        OFFSET $2
+        "#,
+        page_size,
+        page * page_size
     )
     .fetch_all(tx.as_mut())
     .instrument(tracing::info_span!("fetch_all"))
@@ -191,7 +195,7 @@ mod tests {
             item,
         );
 
-        let items = list_items(&mut tx).await.unwrap();
+        let items = list_items(&mut tx, 0, 1).await.unwrap();
         assert_eq!(&item, items.last().unwrap());
     }
 }
