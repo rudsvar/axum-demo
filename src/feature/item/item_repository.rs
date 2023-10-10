@@ -54,7 +54,7 @@ pub async fn create_item(tx: &mut Tx, new_item: Valid<NewItem>) -> ApiResult<Ite
         new_item.name,
         new_item.description
     )
-    .fetch_one(tx)
+    .fetch_one(tx.as_mut())
     .await?;
     tracing::info!("Created item {:?}", item);
     Ok(item)
@@ -72,7 +72,7 @@ pub async fn fetch_item(tx: &mut Tx, id: i32) -> ApiResult<Option<Item>> {
         "#,
         id
     )
-    .fetch_optional(tx)
+    .fetch_optional(tx.as_mut())
     .instrument(tracing::info_span!("fetch_optional"))
     .await?;
     tracing::info!("Found item: {:?}", item);
@@ -94,7 +94,7 @@ pub async fn update_item(tx: &mut Tx, id: i32, new_item: Valid<NewItem>) -> ApiR
         new_item.name,
         new_item.description
     )
-    .fetch_one(tx)
+    .fetch_one(tx.as_mut())
     .await?;
     tracing::info!("Updated item {:?}", item);
     Ok(item)
@@ -112,7 +112,7 @@ pub async fn delete_item(tx: &mut Tx, id: i32) -> ApiResult<()> {
         "#,
         id
     )
-    .execute(tx)
+    .execute(tx.as_mut())
     .await?;
 
     if rows.rows_affected() == 0 {
@@ -135,7 +135,7 @@ pub async fn list_items(tx: &mut Tx) -> ApiResult<Vec<Item>> {
         SELECT * FROM items
         "#
     )
-    .fetch_all(tx)
+    .fetch_all(tx.as_mut())
     .instrument(tracing::info_span!("fetch_all"))
     .await?;
     tracing::info!("Listed {} items", items.len());
@@ -151,7 +151,7 @@ pub fn stream_items(
 ) -> impl Stream<Item = ApiResult<Item>> {
     tracing::info!("Streaming items");
     let items = try_stream! {
-        let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#).fetch(&mut conn);
+        let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#).fetch(conn.as_mut());
         let mut total = 0;
         while let Some(item) = items.next().await {
             yield item?;

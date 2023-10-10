@@ -21,15 +21,15 @@ pub type DbConnection = PoolConnection<Postgres>;
 
 /// Connects to the database based on some configuration.
 pub fn init_db(config: &DatabaseConfig) -> PgPool {
-    let mut db_options = PgConnectOptions::default()
+    let db_options = PgConnectOptions::default()
         .username(&config.username)
         .password(&config.password)
         .host(&config.host)
         .port(config.port)
         .database(&config.database_name)
-        .ssl_mode(PgSslMode::Prefer);
-    db_options.log_statements(LevelFilter::Debug);
-    db_options.log_slow_statements(LevelFilter::Warn, Duration::from_secs(1));
+        .ssl_mode(PgSslMode::Prefer)
+        .log_statements(LevelFilter::Debug)
+        .log_slow_statements(LevelFilter::Warn, Duration::from_secs(1));
     let db: PgPool = PoolOptions::default()
         .acquire_timeout(Duration::from_secs(1))
         .min_connections(1)

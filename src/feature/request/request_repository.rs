@@ -61,7 +61,7 @@ pub async fn log_request(tx: &mut Tx, new_req: NewRequest) -> ApiResult<Request>
         new_req.response_body,
         new_req.status
     )
-    .fetch_one(tx)
+    .fetch_one(tx.as_mut())
     .await?;
     tracing::trace!("Logged request");
     Ok(req)

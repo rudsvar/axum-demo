@@ -66,7 +66,7 @@ pub async fn create_url<R>(
         new_item.target.to_string(),
         user.id()
     )
-    .fetch_one(tx)
+    .fetch_one(tx.as_mut())
     .await?;
     tracing::info!("Created url {:?}", url);
     Ok(url)
@@ -84,7 +84,7 @@ pub async fn fetch_url(tx: &mut Tx, name: &str) -> ApiResult<Option<ShortUrl>> {
         "#,
         name
     )
-    .fetch_optional(tx)
+    .fetch_optional(tx.as_mut())
     .instrument(tracing::info_span!("fetch_optional"))
     .await?;
     tracing::info!("Found url: {:?}", item);
@@ -104,7 +104,7 @@ pub async fn delete_url<R>(tx: &mut Tx, name: &str, user: User<R>) -> ApiResult<
         name,
         user.id()
     )
-    .execute(tx)
+    .execute(tx.as_mut())
     .await?;
 
     if rows.rows_affected() == 0 {
@@ -128,7 +128,7 @@ pub async fn list_items<R>(tx: &mut Tx, user: User<R>) -> ApiResult<Vec<ShortUrl
         "#,
         user.id(),
     )
-    .fetch_all(tx)
+    .fetch_all(tx.as_mut())
     .instrument(tracing::info_span!("fetch_all"))
     .await?;
     tracing::info!("Listed {} items", items.len());

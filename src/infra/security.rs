@@ -245,7 +245,7 @@ pub async fn authenticate(conn: &mut Tx, username: &str, password: &str) -> ApiR
         "#,
         username
     )
-    .fetch_optional(conn)
+    .fetch_optional(conn.as_mut())
     .await?
     .ok_or(ClientError::Unauthorized)?;
 
