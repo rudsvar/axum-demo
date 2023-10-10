@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM short_urls\n        WHERE name = $1 AND created_by = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "63419e45c428d49eaa66cdb6ebae2e409bc622e7d06b2582cffa3077cb2d7f02"
+}
