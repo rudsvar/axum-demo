@@ -7,9 +7,13 @@ use crate::{
         error::{ApiError, ClientError},
     },
 };
-use axum::{body::Bytes, middleware::Next, response::IntoResponse};
+use axum::{
+    body::{Body, Bytes},
+    middleware::Next,
+    response::IntoResponse,
+};
 use http::{Request, Response};
-use hyper::Body;
+use hyper::body::HttpBody;
 use tower_http::trace::MakeSpan;
 
 static X_REQUEST_ID: &str = "x-request-id";
@@ -43,8 +47,16 @@ pub(crate) async fn log_request_response(
 ) -> Result<impl IntoResponse, ApiError> {
     // Print request
     let (parts, body) = req.into_parts();
-    // let req_bytes = buffer_and_print("Request", body).await?;
-    let req = Request::from_parts(parts, body);
+    let req;
+    let req_string = if body.size_hint().upper().is_some() {
+        let body_bytes = buffer_and_print("Request", body).await?;
+        req = Request::from_parts(parts, Body::from(body_bytes.clone()));
+        let body_vec = body_bytes.to_vec();
+        String::from_utf8(body_vec).ok()
+    } else {
+        req = Request::from_parts(parts, body);
+        None
+    };
     let host = req
         .headers()
         .get(http::header::HOST)
@@ -61,8 +73,16 @@ pub(crate) async fn log_request_response(
 
     // Print response
     let (parts, body) = res.into_parts();
-    // let res_bytes = buffer_and_print("Response", body).await?;
-    let res = Response::from_parts(parts, body);
+    let res;
+    let res_string = if body.size_hint().upper().is_some() {
+        let body_bytes = buffer_and_print("Response", body).await?;
+        let body_vec = body_bytes.to_vec();
+        res = Response::from_parts(parts, Body::from(body_bytes.clone())).into_response();
+        String::from_utf8(body_vec).ok()
+    } else {
+        res = Response::from_parts(parts, body);
+        None
+    };
 
     // Log request
     let mut tx = db.begin().await?;
@@ -70,8 +90,8 @@ pub(crate) async fn log_request_response(
         host,
         method,
         uri,
-        request_body: None,
-        response_body: None,
+        request_body: req_string,
+        response_body: res_string,
         status: res.status().as_u16() as i32,
     };
     let _ = request_repository::log_request(&mut tx, new_req).await?;
