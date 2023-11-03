@@ -40,7 +40,7 @@ impl<B> MakeSpan<B> for MakeRequestIdSpan {
 }
 
 /// The maximum size of the request body to log.
-const MAX_BODY_SIZE: u64 = 1024;
+const MAX_BODY_SIZE: u64 = 8192;
 
 /// Print and log the request and response.
 pub(crate) async fn log_request_response(
