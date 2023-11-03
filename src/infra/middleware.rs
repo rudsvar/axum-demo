@@ -39,6 +39,9 @@ impl<B> MakeSpan<B> for MakeRequestIdSpan {
     }
 }
 
+/// The maximum size of the request body to log.
+const MAX_BODY_SIZE: u64 = 1024;
+
 /// Print and log the request and response.
 pub(crate) async fn log_request_response(
     req: hyper::Request<Body>,
@@ -48,7 +51,11 @@ pub(crate) async fn log_request_response(
     // Print request
     let (parts, body) = req.into_parts();
     let req;
-    let req_string = if body.size_hint().upper().is_some() {
+    let log_req = match body.size_hint().upper() {
+        Some(n) => n <= MAX_BODY_SIZE,
+        _ => false,
+    };
+    let req_string = if log_req {
         let body_bytes = buffer_and_print("Request", body).await?;
         req = Request::from_parts(parts, Body::from(body_bytes.clone()));
         let body_vec = body_bytes.to_vec();
@@ -74,7 +81,11 @@ pub(crate) async fn log_request_response(
     // Print response
     let (parts, body) = res.into_parts();
     let res;
-    let res_string = if body.size_hint().upper().is_some() {
+    let log_res = match body.size_hint().upper() {
+        Some(n) => n <= MAX_BODY_SIZE,
+        _ => false,
+    };
+    let res_string = if log_res {
         let body_bytes = buffer_and_print("Response", body).await?;
         let body_vec = body_bytes.to_vec();
         res = Response::from_parts(parts, Body::from(body_bytes.clone())).into_response();
