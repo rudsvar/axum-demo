@@ -37,7 +37,7 @@ struct UrlsId(String);
 #[utoipa::path(
     post,
     path = "/api/urls",
-    request_body = NewItem,
+    request_body = NewShortUrl,
     responses(
         (status = 201, description = "Created", body = ShortUrl),
         (status = 409, description = "Conflict", body = ErrorBody),
@@ -89,7 +89,7 @@ async fn visit_url(
     Ok((StatusCode::SEE_OTHER, hm, Json(url)))
 }
 
-/// Deletes an item.
+/// Deletes a shortened URL.
 #[utoipa::path(
     delete,
     path = "/api/urls/{id}",
@@ -110,12 +110,12 @@ async fn delete_url(UrlsId(id): UrlsId, db: State<DbPool>, user: User) -> ApiRes
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Lists all items.
+/// Lists all shortened URLs.
 #[utoipa::path(
     get,
     path = "/api/urls",
     responses(
-        (status = 200, description = "Success", body = [Url]),
+        (status = 200, description = "Success", body = [ShortUrl]),
         (status = 500, description = "Internal error", body = ErrorBody),
     ),
     security(
