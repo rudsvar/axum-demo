@@ -183,7 +183,9 @@ async fn stream_items<'a>(
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {
     let conn = db.acquire().await?;
     let throttle = Duration::from_millis(stream_params.throttle.unwrap_or(0));
-    Ok(JsonLines::new(item_service::stream_items(conn, params, throttle)))
+    Ok(JsonLines::new(item_service::stream_items(
+        conn, params, throttle,
+    )))
 }
 
 #[cfg(test)]
