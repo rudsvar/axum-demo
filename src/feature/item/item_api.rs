@@ -178,11 +178,12 @@ pub struct StreamParams {
 async fn stream_items<'a>(
     Items2: Items2,
     State(db): State<DbPool>,
-    Query(params): Query<StreamParams>,
+    Query(params): Query<PaginationParams>,
+    Query(stream_params): Query<StreamParams>,
 ) -> ApiResult<JsonLines<impl Stream<Item = Result<Item, ApiError>>, AsResponse>> {
     let conn = db.acquire().await?;
-    let throttle = Duration::from_millis(params.throttle.unwrap_or(0));
-    Ok(JsonLines::new(item_service::stream_items(conn, throttle)))
+    let throttle = Duration::from_millis(stream_params.throttle.unwrap_or(0));
+    Ok(JsonLines::new(item_service::stream_items(conn, params, throttle)))
 }
 
 #[cfg(test)]

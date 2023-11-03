@@ -46,6 +46,6 @@ pub async fn list_items(tx: &mut Tx, params: &PaginationParams) -> ApiResult<Vec
 /// Streams all items.
 #[allow(clippy::let_with_type_underscore)]
 #[instrument(skip(conn))]
-pub fn stream_items(conn: DbConnection, throttle: Duration) -> impl Stream<Item = ApiResult<Item>> {
-    item_repository::stream_items(conn, throttle)
+pub fn stream_items(conn: DbConnection, params: PaginationParams, throttle: Duration) -> impl Stream<Item = ApiResult<Item>> {
+    item_repository::stream_items(conn, params, throttle)
 }

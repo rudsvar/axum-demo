@@ -152,11 +152,22 @@ pub async fn list_items(tx: &mut Tx, params: &PaginationParams) -> ApiResult<Vec
 #[instrument(skip(conn))]
 pub fn stream_items(
     mut conn: DbConnection,
+    params: PaginationParams,
     throttle: Duration,
 ) -> impl Stream<Item = ApiResult<Item>> {
     tracing::info!("Streaming items");
     let items = try_stream! {
-        let mut items = sqlx::query_as!(Item, r#"SELECT * FROM items"#).fetch(conn.as_mut());
+        let mut items = sqlx::query_as!(
+            Item,
+            r#"
+                SELECT * FROM items
+                LIMIT $1
+                OFFSET $2
+            "#,
+            params.limit(),
+            params.offset()
+        )
+        .fetch(conn.as_mut());
         let mut total = 0;
         while let Some(item) = items.next().await {
             yield item?;
