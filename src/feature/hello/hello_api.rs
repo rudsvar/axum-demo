@@ -11,7 +11,6 @@ use axum::{routing::get, Router};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::instrument;
-use utoipa::{IntoParams, ToSchema};
 
 /// The hello API endpoints.
 pub fn routes() -> Router<AppState> {
@@ -19,7 +18,7 @@ pub fn routes() -> Router<AppState> {
 }
 
 /// A name query parameter.
-#[derive(Deserialize, IntoParams)]
+#[derive(Deserialize)]
 pub struct GreetingParams {
     name: Option<String>,
 }
@@ -31,7 +30,7 @@ impl Debug for GreetingParams {
 }
 
 /// This is a response to the hello endpoint.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Greeting {
     /// A personal greeting.
     pub greeting: String,
@@ -50,14 +49,6 @@ impl Greeting {
 }
 
 /// A handler for requests to the hello endpoint.
-#[utoipa::path(
-    get,
-    path = "/api/hello",
-    params(GreetingParams),
-    responses(
-        (status = 200, description = "Success", body = Greeting),
-    )
-)]
 #[instrument]
 pub async fn hello(Query(params): Query<GreetingParams>) -> Json<Greeting> {
     let name = params.name.as_deref().unwrap_or("World");

@@ -13,10 +13,9 @@ use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use tower_http::catch_panic::ResponseForPanic;
-use utoipa::ToSchema;
 
 /// A standard error response body.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ErrorBody {
     /// A description of the error.
     message: String,

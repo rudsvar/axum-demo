@@ -25,7 +25,6 @@ use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::instrument;
-use utoipa::IntoParams;
 
 /// The item API endpoints.
 pub fn routes() -> Router<AppState> {
@@ -51,16 +50,6 @@ struct Items2;
 struct ItemsId(i32);
 
 /// Creates a new item.
-#[utoipa::path(
-    post,
-    path = "/api/items",
-    request_body = NewItem,
-    responses(
-        (status = 201, description = "Created", body = Item),
-        (status = 409, description = "Conflict", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(new_item))]
 async fn create_item(
     Items: Items,
@@ -75,15 +64,6 @@ async fn create_item(
 }
 
 /// Gets an item.
-#[utoipa::path(
-    get,
-    path = "/api/items/{id}",
-    responses(
-        (status = 200, description = "Ok", body = Item),
-        (status = 404, description = "Not Found", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(id))]
 async fn get_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<(StatusCode, Json<Item>)> {
     let mut tx = db.begin().await?;
@@ -95,16 +75,6 @@ async fn get_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<(StatusC
 }
 
 /// Updates an item.
-#[utoipa::path(
-    put,
-    path = "/api/items/{id}",
-    request_body = NewItem,
-    responses(
-        (status = 200, description = "Ok", body = Item),
-        (status = 404, description = "Not Found", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip(db))]
 async fn update_item(
     ItemsId(id): ItemsId,
@@ -119,15 +89,6 @@ async fn update_item(
 }
 
 /// Deletes an item.
-#[utoipa::path(
-    delete,
-    path = "/api/items/{id}",
-    responses(
-        (status = 200, description = "Ok", body = Item),
-        (status = 404, description = "Not Found", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(id))]
 async fn delete_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<StatusCode> {
     let mut tx = db.begin().await?;
@@ -137,15 +98,6 @@ async fn delete_item(ItemsId(id): ItemsId, db: State<DbPool>) -> ApiResult<Statu
 }
 
 /// Lists all items.
-#[utoipa::path(
-    get,
-    path = "/api/items",
-    params(PaginationParams),
-    responses(
-        (status = 200, description = "Success", body = [Item]),
-        (status = 500, description = "Internal error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all)]
 async fn list_items(
     Items: Items,
@@ -158,22 +110,13 @@ async fn list_items(
 }
 
 /// Options for how to stream result.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, IntoParams)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct StreamParams {
     /// The delay between each result in milliseconds.
     throttle: Option<u64>,
 }
 
 /// Streams all items.
-#[utoipa::path(
-    get,
-    path = "/api/items2",
-    params(StreamParams),
-    responses(
-        (status = 200, description = "Success", body = [Item]),
-        (status = 500, description = "Internal error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(params))]
 async fn stream_items<'a>(
     Items2: Items2,

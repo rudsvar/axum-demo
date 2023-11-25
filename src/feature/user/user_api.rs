@@ -18,18 +18,6 @@ pub fn routes() -> Router<AppState> {
 }
 
 /// Authenticates a user.
-#[utoipa::path(
-    get,
-    path = "/api/user",
-    responses(
-        (status = 200, description = "Ok", body = i32),
-        (status = 401, description = "Unauthorized", body = ErrorBody),
-        (status = 500, description = "Internal error", body = ErrorBody),
-    ),
-    security(
-        ("basic" = [])
-    )
-)]
 #[instrument]
 pub async fn user(user: User) -> ApiResult<Json<i32>> {
     tracing::info!("User logged in");
@@ -37,19 +25,6 @@ pub async fn user(user: User) -> ApiResult<Json<i32>> {
 }
 
 /// Authenticates an admin user.
-#[utoipa::path(
-    get,
-    path = "/api/admin",
-    responses(
-        (status = 200, description = "Ok", body = i32),
-        (status = 401, description = "Unauthorized", body = ErrorBody),
-        (status = 403, description = "Forbidden", body = ErrorBody),
-        (status = 500, description = "Internal error", body = ErrorBody),
-    ),
-    security(
-        ("basic" = [])
-    )
-)]
 #[instrument]
 pub async fn admin(user: User<Admin>) -> ApiResult<Json<i32>> {
     tracing::info!("Admin logged in");
@@ -67,19 +42,6 @@ impl Role for CustomRole {
 }
 
 /// Authenticates user with a custom role.
-#[utoipa::path(
-    get,
-    path = "/api/custom",
-    responses(
-        (status = 200, description = "Ok", body = i32),
-        (status = 401, description = "Unauthorized", body = ErrorBody),
-        (status = 403, description = "Forbidden", body = ErrorBody),
-        (status = 500, description = "Internal error", body = ErrorBody),
-    ),
-    security(
-        ("basic" = [])
-    )
-)]
 #[instrument]
 pub async fn custom(user: User<CustomRole>) -> ApiResult<Json<i32>> {
     tracing::info!("Custom user logged in");

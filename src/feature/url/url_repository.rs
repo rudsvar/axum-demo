@@ -10,39 +10,31 @@ use chrono::{DateTime, Utc};
 use http::Uri;
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Instrument};
-use utoipa::ToSchema;
 use validator::Validate;
 
 /// A new URL to shorten.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Validate)]
 pub struct NewShortUrl {
     /// The name of the shortened URL.
-    #[schema(example = "example")]
     #[validate(length(min = 1))]
     pub name: String,
     /// The URL to shorten.
-    #[schema(example = "https://example.com")]
     #[serde(with = "http_serde::uri")]
     pub target: Uri,
 }
 
 /// An existing shortened URL.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShortUrl {
     /// The URL's id.
-    #[schema(example = "1")]
     pub id: i32,
     /// The name of the shortened URL.
-    #[schema(example = "example")]
     pub name: String,
     /// The URL to redirect to.
-    #[schema(example = "https://example.com")]
     pub target: String,
     /// The user who created the URL.
-    #[schema(example = "1")]
     pub created_by: i32,
     /// The time the URL was created.
-    #[schema(example = "2021-01-01T00:00:00Z")]
     pub created_at: DateTime<Utc>,
 }
 

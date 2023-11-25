@@ -25,6 +25,23 @@
 //! assert_eq!(Greeting::new("Hello, Foo!".to_string()), response.json::<Greeting>().await.unwrap());
 //! # });
 //! ```
+//!
+//! Create item.
+//!
+//! ```rust
+//! # use axum_demo::feature::hello::hello_api::Greeting;
+//! # use axum_demo::feature::item::item_repository::{NewItem};
+//! # tokio_test::block_on(async {
+//! # let url = axum_demo::server::spawn_app().await;
+//! let client = reqwest::ClientBuilder::default().build().unwrap();
+//! let new_item = NewItem { name: "Foo".to_string(), description: None };
+//! let response = client.post(format!("{}/items", url)).json(new_item).send().await.unwrap();
+//! assert_eq!(201, response.status());
+//! let item = response.json::<Item>().await.unwrap();
+//! let expected = Item { id: 1, name: "Foo".to_string(), description: None };
+//! assert_eq!(expected, item);
+//! # });
+//! ```
 
 use crate::feature::hello::hello_api;
 use crate::feature::info::info_api;
@@ -32,7 +49,6 @@ use crate::feature::item::item_api;
 use crate::feature::url::url_api;
 use crate::feature::user::user_api;
 use crate::infra::database::DbPool;
-use crate::infra::openapi::ApiDoc;
 use crate::{
     infra::middleware::{log_request_response, MakeRequestIdSpan},
     infra::{
@@ -41,6 +57,7 @@ use crate::{
         state::AppState,
     },
 };
+use axum::{Extension, Json};
 use axum::response::Redirect;
 use axum::routing::get;
 use axum::{error_handling::HandleErrorLayer, response::IntoResponse, Router};
@@ -56,8 +73,6 @@ use tower_http::{
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 /// Constructs the full REST API including middleware.
 pub fn rest_api(state: AppState) -> Router {
@@ -97,14 +112,18 @@ pub fn rest_api(state: AppState) -> Router {
         .layer(CatchPanicLayer::custom(PanicHandler))
 }
 
+async fn serve_api(Extension(api): Extension<OpenApi>) -> impl IntoApiResponse {
+    Json(api)
+}
+
 /// Constructs the full axum application.
 pub fn app(state: AppState) -> Router {
     // The full application with some top level routes, a GraphQL API, and a REST API.
     let swagger_path = "/swagger-ui";
     Router::new()
         .route("/", get(|| async { Redirect::permanent(swagger_path) }))
-        // Swagger ui
-        .merge(SwaggerUi::new(swagger_path).url("/api-doc/openapi.json", ApiDoc::openapi()))
+        // API specification
+        .route("/api.json", get(serve_api));
         // API
         .nest("/api", rest_api(state))
 }

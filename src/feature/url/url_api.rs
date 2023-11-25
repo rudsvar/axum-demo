@@ -34,19 +34,6 @@ struct Urls;
 struct UrlsId(String);
 
 /// Shortens a new URL.
-#[utoipa::path(
-    post,
-    path = "/api/urls",
-    request_body = NewShortUrl,
-    responses(
-        (status = 201, description = "Created", body = ShortUrl),
-        (status = 409, description = "Conflict", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    ),
-    security(
-        ("basic" = [])
-    )
-)]
 #[instrument(skip_all, fields(new_item))]
 async fn create_url(
     Urls: Urls,
@@ -62,15 +49,6 @@ async fn create_url(
 }
 
 /// Gets a shortened URL.
-#[utoipa::path(
-    get,
-    path = "/api/urls/{name}",
-    responses(
-        (status = 303, description = "See Other", body = ShortUrl),
-        (status = 404, description = "Not Found", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    )
-)]
 #[instrument(skip_all, fields(id))]
 async fn visit_url(
     UrlsId(name): UrlsId,
@@ -90,18 +68,6 @@ async fn visit_url(
 }
 
 /// Deletes a shortened URL.
-#[utoipa::path(
-    delete,
-    path = "/api/urls/{id}",
-    responses(
-        (status = 200, description = "Ok", body = ShortUrl),
-        (status = 404, description = "Not Found", body = ErrorBody),
-        (status = 500, description = "Internal Server Error", body = ErrorBody),
-    ),
-    security(
-        ("basic" = [])
-    )
-)]
 #[instrument(skip_all, fields(id))]
 async fn delete_url(UrlsId(id): UrlsId, db: State<DbPool>, user: User) -> ApiResult<StatusCode> {
     let mut tx = db.begin().await?;
@@ -111,17 +77,6 @@ async fn delete_url(UrlsId(id): UrlsId, db: State<DbPool>, user: User) -> ApiRes
 }
 
 /// Lists all shortened URLs.
-#[utoipa::path(
-    get,
-    path = "/api/urls",
-    responses(
-        (status = 200, description = "Success", body = [ShortUrl]),
-        (status = 500, description = "Internal error", body = ErrorBody),
-    ),
-    security(
-        ("basic" = [])
-    )
-)]
 #[instrument(skip_all)]
 async fn list_urls(Urls: Urls, db: State<DbPool>, user: User) -> ApiResult<Json<Vec<ShortUrl>>> {
     let mut tx = db.begin().await?;

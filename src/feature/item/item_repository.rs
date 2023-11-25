@@ -11,31 +11,26 @@ use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{instrument, Instrument};
-use utoipa::ToSchema;
 use validator::Validate;
 
 /// A new item.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Validate)]
 pub struct NewItem {
     /// The item's name.
-    #[schema(example = "MyItem")]
     #[validate(length(min = 1))]
     pub name: String,
     /// The item's description.
-    #[schema(example = "A very interesting item")]
     #[validate(length(min = 1))]
     pub description: Option<String>,
 }
 
 /// An existing item.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Item {
     /// The item's id.
     pub id: i32,
-    #[schema(example = "MyItem")]
     /// The item's name.
     pub name: String,
-    #[schema(example = "A very interesting item")]
     /// The item's description.
     pub description: Option<String>,
 }

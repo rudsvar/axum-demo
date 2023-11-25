@@ -9,7 +9,6 @@ pub mod extract;
 pub mod http;
 pub mod logging;
 pub mod middleware;
-pub mod openapi;
 pub mod pagination;
 pub mod security;
 pub mod state;

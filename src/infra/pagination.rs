@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
-use utoipa::IntoParams;
 
 /// Pagination parameters.
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, IntoParams)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaginationParams {
     /// The 0-indexed page to fetch.
