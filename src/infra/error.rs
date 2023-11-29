@@ -225,7 +225,7 @@ impl IntoResponse for InternalError {
 pub struct PanicHandler;
 
 impl ResponseForPanic for PanicHandler {
-    type ResponseBody = axum::body::BoxBody;
+    type ResponseBody = axum::body::Body;
 
     fn response_for_panic(
         &mut self,

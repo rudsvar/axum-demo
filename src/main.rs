@@ -2,7 +2,8 @@
 
 use axum_demo::infra::{self};
 use sqlx::migrate::Migrator;
-use std::{net::TcpListener, time::Duration};
+use std::time::Duration;
+use tokio::net::TcpListener;
 
 static MIGRATOR: Migrator = sqlx::migrate!();
 
@@ -28,7 +29,8 @@ async fn main() -> color_eyre::Result<()> {
     let listener = TcpListener::bind(format!(
         "{}:{}",
         config.server.http_address, config.server.http_port
-    ))?;
+    ))
+    .await?;
     axum_demo::server::run_app(listener, db.clone(), config.clone()).await?;
 
     Ok(())

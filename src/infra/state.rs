@@ -4,14 +4,14 @@
 //! database pool or a preconfigured http client.
 
 use super::{config::Config, database::DbPool};
-use crate::infra::http::HttpClient;
 use axum::extract::FromRef;
+use reqwest::Client;
 
 /// Global application state.
 #[derive(Clone, Debug, FromRef)]
 pub struct AppState {
     db: DbPool,
-    client: HttpClient,
+    client: Client,
     config: Config,
 }
 
@@ -19,7 +19,6 @@ impl AppState {
     /// Constructs a new [`AppState`].
     pub fn new(db: DbPool, config: Config) -> Self {
         let client = reqwest::Client::new();
-        let client = HttpClient::new(client, db.clone());
         Self { db, client, config }
     }
 
@@ -29,7 +28,7 @@ impl AppState {
     }
 
     /// Returns the HTTP client.
-    pub fn http(&self) -> &HttpClient {
+    pub fn http(&self) -> &Client {
         &self.client
     }
 

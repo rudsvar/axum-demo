@@ -41,12 +41,14 @@ use crate::{
         state::AppState,
     },
 };
+use axum::middleware::Next;
 use axum::response::Redirect;
 use axum::routing::get;
 use axum::{error_handling::HandleErrorLayer, response::IntoResponse, Router};
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
-use std::{iter::once, net::TcpListener, time::Duration};
+use std::{iter::once, time::Duration};
+use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::{
     catch_panic::CatchPanicLayer,
@@ -80,7 +82,7 @@ pub fn rest_api(state: AppState) -> Router {
         .with_state(state)
         // Layers
         .layer(TimeoutLayer::new(Duration::from_secs(10)))
-        .layer(axum::middleware::from_fn(move |req, next| {
+        .layer(axum::middleware::from_fn(move |req, next: Next| {
             log_request_response(req, next, db.clone())
         }))
         .layer(
@@ -115,18 +117,10 @@ pub async fn run_app(addr: TcpListener, db: PgPool, config: Config) -> Result<()
     let app = app(state);
 
     tracing::info!("Starting axum on {}", addr.local_addr().unwrap());
-    axum::Server::from_tcp(addr)?
-        .serve(app.into_make_service())
-        .with_graceful_shutdown(shutdown())
-        .await
-}
-
-/// Completes when when ctrl-c is pressed.
-pub(crate) async fn shutdown() {
-    if let Err(e) = tokio::signal::ctrl_c().await {
-        tracing::error!("Failed to fetch ctrl_c: {}", e);
+    if let Err(e) = axum::serve(addr, app.into_make_service()).await {
+        tracing::error!("Server error: {}", e);
     }
-    tracing::info!("Shutting down");
+    Ok(())
 }
 
 /// Spawn a server on a random port.
@@ -139,7 +133,7 @@ pub async fn spawn_app() -> String {
 /// Spawn a server on a random port with a custom database.
 pub async fn spawn_app_with_db(db: DbPool) -> String {
     let address = "127.0.0.1";
-    let listener = TcpListener::bind(format!("{address}:0")).unwrap();
+    let listener = TcpListener::bind(format!("{address}:0")).await.unwrap();
     let port = listener.local_addr().unwrap().port();
     let config = crate::infra::config::load_config().unwrap();
     tokio::spawn(run_app(listener, db, config));
@@ -153,8 +147,9 @@ mod tests {
         feature::hello::hello_api::Greeting,
         infra::{database::DbPool, error::ErrorBody, state::AppState},
     };
-    use axum::Router;
+    use axum::{body::Body, Router};
     use base64::Engine;
+    use futures::StreamExt;
     use http::{Request, StatusCode};
     use serde::Deserialize;
     use tower::ServiceExt;
@@ -293,7 +288,7 @@ mod tests {
     fn swagger_ui_oneshot(db: DbPool) {
         let app = test_app(db);
         let req = Request::get("/swagger-ui/index.html")
-            .body(hyper::Body::empty())
+            .body(Body::empty())
             .unwrap();
         let result = app.oneshot(req).await.unwrap();
         assert_eq!(StatusCode::OK, result.status())
@@ -302,12 +297,15 @@ mod tests {
     #[sqlx::test]
     fn hello_oneshot(db: DbPool) {
         let app = test_app(db);
-        let req = Request::get("/api/hello")
-            .body(hyper::Body::empty())
-            .unwrap();
+        let req = Request::get("/api/hello").body(Body::empty()).unwrap();
         let res = app.oneshot(req).await.unwrap();
         assert_eq!(StatusCode::OK, res.status());
-        let body = hyper::body::to_bytes(res.into_body()).await.unwrap();
+        let body: Vec<u8> = res
+            .into_body()
+            .into_data_stream()
+            .filter_map(|res| std::future::ready(res.ok().map(|b| b.to_vec())))
+            .concat()
+            .await;
         let greeting: Greeting = serde_json::from_slice(&body).unwrap();
         assert_eq!(Greeting::new("Hello, World!".to_string()), greeting)
     }
@@ -316,11 +314,16 @@ mod tests {
     fn hello_oneshot2(db: DbPool) {
         let app = test_app(db);
         let req = Request::get("/api/hello?name=There")
-            .body(hyper::Body::empty())
+            .body(Body::empty())
             .unwrap();
         let res = app.oneshot(req).await.unwrap();
         assert_eq!(StatusCode::OK, res.status());
-        let body = hyper::body::to_bytes(res.into_body()).await.unwrap();
+        let body = res
+            .into_body()
+            .into_data_stream()
+            .filter_map(|res| std::future::ready(res.ok().map(|b| b.to_vec())))
+            .concat()
+            .await;
         let greeting: Greeting = serde_json::from_slice(&body).unwrap();
         assert_eq!(Greeting::new("Hello, There!".to_string()), greeting)
     }
@@ -331,7 +334,7 @@ mod tests {
 
         // Shorten a new URL
         let auth = base64::engine::general_purpose::STANDARD.encode("user:user");
-        let req = Request::post("/api/urls")
+        let req: Request<Body> = Request::post("/api/urls")
             .header("Authorization", format!("Basic {}", &auth))
             .header("Content-Type", "application/json")
             .body(r#"{"name": "example", "target": "https://example.com/"}"#.into())
@@ -341,7 +344,7 @@ mod tests {
 
         // Visits the shortened URL
         let req = Request::get("/api/urls/example")
-            .body(hyper::Body::empty())
+            .body(Body::empty())
             .unwrap();
         let res = app.oneshot(req).await.unwrap();
         assert_eq!(StatusCode::SEE_OTHER, res.status());

@@ -7,13 +7,10 @@ use crate::{
         error::{ApiError, ClientError},
     },
 };
-use axum::{
-    body::{Body, Bytes},
-    middleware::Next,
-    response::IntoResponse,
-};
+use axum::{body::Body, middleware::Next, response::IntoResponse};
+use futures::StreamExt;
 use http::{Request, Response};
-use hyper::body::HttpBody;
+use hyper::body::Body as _;
 use tower_http::trace::MakeSpan;
 
 static X_REQUEST_ID: &str = "x-request-id";
@@ -44,8 +41,8 @@ const MAX_BODY_SIZE: u64 = 8192;
 
 /// Print and log the request and response.
 pub(crate) async fn log_request_response(
-    req: hyper::Request<Body>,
-    next: Next<Body>,
+    req: Request<axum::body::Body>,
+    next: Next,
     db: DbPool,
 ) -> Result<impl IntoResponse, ApiError> {
     // Print request
@@ -57,7 +54,7 @@ pub(crate) async fn log_request_response(
     };
     let req_string = if log_req {
         let body_bytes = buffer_and_print("Request", body).await?;
-        req = Request::from_parts(parts, Body::from(body_bytes.clone()));
+        req = Request::from_parts(parts, axum::body::Body::from(body_bytes.clone()));
         let body_vec = body_bytes.to_vec();
         String::from_utf8(body_vec).ok()
     } else {
@@ -88,7 +85,8 @@ pub(crate) async fn log_request_response(
     let res_string = if log_res {
         let body_bytes = buffer_and_print("Response", body).await?;
         let body_vec = body_bytes.to_vec();
-        res = Response::from_parts(parts, Body::from(body_bytes.clone())).into_response();
+        res =
+            Response::from_parts(parts, axum::body::Body::from(body_bytes.clone())).into_response();
         String::from_utf8(body_vec).ok()
     } else {
         res = Response::from_parts(parts, body);
@@ -113,15 +111,13 @@ pub(crate) async fn log_request_response(
 
 /// Read the entire request body stream and store it in memory.
 #[allow(dead_code)]
-async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, ApiError>
-where
-    B: axum::body::HttpBody,
-    B::Error: std::fmt::Display,
-{
+async fn buffer_and_print(direction: &str, body: Body) -> Result<Vec<u8>, ApiError> {
     // Try to read stream
-    let bytes = hyper::body::to_bytes(body)
-        .await
-        .map_err(|e| ApiError::ClientError(ClientError::BadRequest(e.to_string())))?;
+    let bytes: Vec<u8> = body
+        .into_data_stream()
+        .filter_map(|b| std::future::ready(b.ok().map(|b| b.to_vec())))
+        .concat()
+        .await;
 
     // Log if valid text
     if let Ok(body) = std::str::from_utf8(&bytes) {

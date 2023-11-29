@@ -38,11 +38,10 @@ use super::{
     error::{ApiError, ApiResult, ClientError},
     state::AppState,
 };
-use axum::{
-    async_trait,
-    extract::FromRequestParts,
+use axum::{async_trait, extract::FromRequestParts, RequestPartsExt};
+use axum_extra::{
     headers::{authorization::Basic, Authorization},
-    RequestPartsExt, TypedHeader,
+    TypedHeader,
 };
 use cached::proc_macro::cached;
 use std::marker::PhantomData;
