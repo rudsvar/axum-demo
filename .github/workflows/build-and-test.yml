@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Build and Test
 
 on:
   push:
@@ -9,8 +9,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   SQLX_VERSION: 0.7.2
-  REGISTRY: "registry.digitalocean.com/rudsvar"
-  IMAGE_NAME: "axum-demo"
   DATABASE_URL: ${{ secrets.DATABASE_URL }} # For sqlx
 
 jobs:
@@ -63,29 +61,3 @@ jobs:
 
       - name: Run cargo test
         run: cargo test
-
-  deploy:
-    if: github.ref == 'refs/heads/main' && false
-    name: Deploy
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout the repo
-        uses: actions/checkout@v3
-
-      - name: Build container image
-        run: docker build . -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
-
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-
-      - name: Log in to DigitalOcean Container Registry with short-lived credentials
-        run: doctl registry login --expiry-seconds 600
-
-      - name: Remove all old images
-        run: if [ ! -z "$(doctl registry repository list | grep "$(echo $IMAGE_NAME)")" ]; then doctl registry repository delete-manifest $(echo $IMAGE_NAME) $(doctl registry repository list-tags $(echo $IMAGE_NAME) | grep -o "sha.*") --force; else echo "No repository"; fi
-
-      - name: Push image to DigitalOcean Container Registry
-        run: docker push $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
