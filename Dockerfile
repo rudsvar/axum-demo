@@ -25,5 +25,6 @@ RUN apt-get install -y libssl-dev
 COPY --from=builder /app/target/release/axum-demo /usr/local/bin
 COPY --from=builder /app/target/doc doc
 COPY config.toml config.toml
+EXPOSE 80
 ENV RUST_LOG info,axum_web_demo=debug,sqlx=off
 ENTRYPOINT ["/usr/local/bin/axum-demo"]
