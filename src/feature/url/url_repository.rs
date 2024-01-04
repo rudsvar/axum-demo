@@ -7,7 +7,6 @@ use crate::infra::{
     validation::Valid,
 };
 use chrono::{DateTime, Utc};
-use http::Uri;
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Instrument};
 use utoipa::ToSchema;
@@ -22,8 +21,8 @@ pub struct NewShortUrl {
     pub name: String,
     /// The URL to shorten.
     #[schema(example = "https://example.com")]
-    #[serde(with = "http_serde::uri")]
-    pub target: Uri,
+    #[validate(url)]
+    pub target: String,
 }
 
 /// An existing shortened URL.
