@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.67-buster AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-latest AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -26,5 +26,5 @@ COPY --from=builder /app/target/release/axum-demo /usr/local/bin
 COPY --from=builder /app/target/doc doc
 COPY config.toml config.toml
 EXPOSE 80
-ENV RUST_LOG info,axum_web_demo=debug,sqlx=off
+ENV RUST_LOG warn,axum_demo=debug
 ENTRYPOINT ["/usr/local/bin/axum-demo"]
