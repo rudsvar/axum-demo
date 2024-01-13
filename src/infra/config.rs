@@ -23,6 +23,8 @@ pub struct ServerConfig {
     pub grpc_address: String,
     /// Server https port.
     pub grpc_port: u16,
+    /// Lifetime of a session in seconds.
+    pub session_seconds: u32,
 }
 
 /// Database configuration.

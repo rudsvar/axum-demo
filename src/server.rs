@@ -29,6 +29,7 @@
 use crate::feature::hello::hello_api;
 use crate::feature::info::info_api;
 use crate::feature::item::item_api;
+use crate::feature::session::session_api;
 use crate::feature::url::url_api;
 use crate::feature::user::user_api;
 use crate::infra::database::DbPool;
@@ -57,6 +58,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
+use tower_sessions::{Expiry, PostgresStore, SessionManagerLayer};
 use tracing::Level;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -100,11 +102,16 @@ pub fn rest_api(state: AppState) -> Router {
 }
 
 /// Constructs the full axum application.
-pub fn app(state: AppState) -> Router {
+pub fn app(state: AppState, store: PostgresStore) -> Router {
     // The full application with some top level routes, a GraphQL API, and a REST API.
     let swagger_path = "/swagger-ui";
+    let session_seconds = state.config().server.session_seconds;
+    let expiry = Expiry::OnInactivity(time::Duration::seconds(session_seconds as i64));
+    let session_layer = SessionManagerLayer::new(store).with_expiry(expiry);
     Router::new()
         .route("/", get(|| async { Redirect::permanent(swagger_path) }))
+        .merge(session_api::routes())
+        .layer(session_layer)
         // Swagger ui
         .merge(SwaggerUi::new(swagger_path).url("/api-doc/openapi.json", ApiDoc::openapi()))
         // API
@@ -112,9 +119,14 @@ pub fn app(state: AppState) -> Router {
 }
 
 /// Starts the axum server.
-pub async fn run_app(addr: TcpListener, db: PgPool, config: Config) -> Result<(), hyper::Error> {
+pub async fn run_app(
+    addr: TcpListener,
+    db: PgPool,
+    store: PostgresStore,
+    config: Config,
+) -> Result<(), hyper::Error> {
     let state = AppState::new(db.clone(), config);
-    let app = app(state);
+    let app = app(state, store);
 
     tracing::info!("Starting axum on {}", addr.local_addr().unwrap());
     if let Err(e) = axum::serve(addr, app.into_make_service()).await {
@@ -136,7 +148,8 @@ pub async fn spawn_app_with_db(db: DbPool) -> String {
     let listener = TcpListener::bind(format!("{address}:0")).await.unwrap();
     let port = listener.local_addr().unwrap().port();
     let config = crate::infra::config::load_config().unwrap();
-    tokio::spawn(run_app(listener, db, config));
+    let store = PostgresStore::new(db.clone());
+    tokio::spawn(run_app(listener, db, store, config));
     format!("http://{address}:{port}/api")
 }
 
@@ -156,8 +169,9 @@ mod tests {
 
     fn test_app(db: DbPool) -> Router {
         let config = crate::infra::config::load_config().unwrap();
+        let store = PostgresStore::new(db.clone());
         let state = AppState::new(db, config);
-        app(state)
+        app(state, store)
     }
 
     async fn get<T: for<'a> Deserialize<'a>>(url: &str) -> T {
