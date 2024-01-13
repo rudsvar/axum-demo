@@ -27,9 +27,9 @@
 //! ```
 
 use crate::feature::hello::hello_api;
+use crate::feature::home::home_api;
 use crate::feature::info::info_api;
 use crate::feature::item::item_api;
-use crate::feature::session::session_api;
 use crate::feature::url::url_api;
 use crate::feature::user::user_api;
 use crate::infra::database::DbPool;
@@ -43,8 +43,6 @@ use crate::{
     },
 };
 use axum::middleware::Next;
-use axum::response::Redirect;
-use axum::routing::get;
 use axum::{error_handling::HandleErrorLayer, response::IntoResponse, Router};
 use hyper::header::AUTHORIZATION;
 use sqlx::PgPool;
@@ -104,16 +102,16 @@ pub fn rest_api(state: AppState) -> Router {
 /// Constructs the full axum application.
 pub fn app(state: AppState, store: PostgresStore) -> Router {
     // The full application with some top level routes, a GraphQL API, and a REST API.
-    let swagger_path = "/swagger-ui";
+    let swagger_path = "/api";
     let session_seconds = state.config().server.session_seconds;
     let expiry = Expiry::OnInactivity(time::Duration::seconds(session_seconds as i64));
     let session_layer = SessionManagerLayer::new(store).with_expiry(expiry);
     Router::new()
-        .route("/", get(|| async { Redirect::permanent(swagger_path) }))
-        .merge(session_api::routes())
+        .merge(home_api::routes())
         .layer(session_layer)
+        .with_state(state.clone())
         // Swagger ui
-        .merge(SwaggerUi::new(swagger_path).url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .merge(SwaggerUi::new(swagger_path).url("/api/openapi.json", ApiDoc::openapi()))
         // API
         .nest("/api", rest_api(state))
 }
@@ -301,9 +299,7 @@ mod tests {
     #[sqlx::test]
     fn swagger_ui_oneshot(db: DbPool) {
         let app = test_app(db);
-        let req = Request::get("/swagger-ui/index.html")
-            .body(Body::empty())
-            .unwrap();
+        let req = Request::get("/api/index.html").body(Body::empty()).unwrap();
         let result = app.oneshot(req).await.unwrap();
         assert_eq!(StatusCode::OK, result.status())
     }

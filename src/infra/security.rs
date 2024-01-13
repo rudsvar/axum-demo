@@ -44,6 +44,7 @@ use axum_extra::{
     TypedHeader,
 };
 use cached::proc_macro::cached;
+use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use tracing::instrument;
 
@@ -138,9 +139,10 @@ impl Role for Admin {
 ///     let admin: Result<User<Admin>, ApiError> = user.try_upgrade();
 /// }
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct User<R = Unknown> {
     id: i32,
+    username: String,
     role: String,
     role_type: PhantomData<R>,
 }
@@ -149,6 +151,11 @@ impl<R> User<R> {
     /// The id of the user.
     pub fn id(&self) -> i32 {
         self.id
+    }
+
+    /// The username of the user.
+    pub fn username(&self) -> &str {
+        self.username.as_ref()
     }
 
     /// The role of the user.
@@ -164,6 +171,7 @@ impl<R> User<R> {
         if NewRole::is_satisfied(&[&self.role]) {
             Ok(User {
                 id: self.id,
+                username: self.username,
                 role: self.role,
                 role_type: PhantomData,
             })
@@ -178,6 +186,7 @@ impl User<Admin> {
     pub fn into_any(self) -> User {
         User {
             id: self.id,
+            username: self.username,
             role: self.role,
             role_type: PhantomData,
         }
@@ -236,7 +245,7 @@ where
 )]
 #[instrument(skip(conn, password))]
 pub async fn authenticate(conn: &mut Tx, username: &str, password: &str) -> ApiResult<User> {
-    tracing::info!("Fetching {}'s password", username);
+    tracing::info!("Fetching password");
     let user = sqlx::query!(
         r#"
         SELECT id, password, role FROM users
@@ -251,12 +260,15 @@ pub async fn authenticate(conn: &mut Tx, username: &str, password: &str) -> ApiR
     tracing::info!("Verifying password");
     let password_is_ok = bcrypt::verify(password, &user.password)?;
     if password_is_ok {
+        tracing::info!("Correct password");
         Ok(User {
             id: user.id,
+            username: username.to_string(),
             role: user.role,
             role_type: PhantomData,
         })
     } else {
+        tracing::warn!("Incorrect password");
         Err(ClientError::Unauthorized.into())
     }
 }
@@ -301,6 +313,7 @@ mod tests {
     fn user() -> User {
         User {
             id: 0,
+            username: "admin".into(),
             role: "admin".into(),
             role_type: PhantomData,
         }
