@@ -18,7 +18,7 @@ RUN cargo build --release --bin axum-demo
 # Build docs
 RUN cargo doc --no-deps --release
 
-FROM debian:buster-slim AS runtime
+FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 RUN apt-get update
 RUN apt-get install -y libssl-dev
