@@ -33,9 +33,11 @@
 //! }
 //! ```
 
+use crate::infra::error::Redirection;
+
 use super::{
     database::Tx,
-    error::{ApiError, ApiResult, ClientError},
+    error::{ApiError, ApiResult, ClientError, InternalError},
     state::AppState,
 };
 use axum::{async_trait, extract::FromRequestParts, RequestPartsExt};
@@ -46,6 +48,7 @@ use axum_extra::{
 use cached::proc_macro::cached;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
+use tower_sessions::Session;
 use tracing::instrument;
 
 const ADMIN_ROLE: &str = "admin";
@@ -202,10 +205,46 @@ impl<R> std::fmt::Debug for User<R> {
     }
 }
 
+async fn extract_user_from_session<R>(
+    req: &mut http::request::Parts,
+) -> Result<Option<User<R>>, ApiError>
+where
+    R: Role + Send,
+{
+    let session = req
+        .extract::<Option<Session>>()
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to extract session: {}", e);
+            e
+        })
+        .unwrap_or(None);
+
+    // If there's a session, get the user from there
+    if let Some(session) = session {
+        let user = session.get::<User>("user").await.map_err(|e| {
+            tracing::warn!("Failed to fetch user data from session: {}", e);
+            InternalError::Other(e.to_string())
+        })?;
+        match user {
+            Some(user) => {
+                tracing::info!("{} is already logged in", user.username());
+                return Ok(Some(user.try_upgrade()?));
+            }
+            None => {
+                tracing::info!("Not logged in, showing login page");
+                return Err(ApiError::from(Redirection::ToLogin));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 #[async_trait]
 impl<R> FromRequestParts<AppState> for User<R>
 where
-    R: Role,
+    R: Role + Send,
 {
     type Rejection = ApiError;
 
@@ -213,6 +252,17 @@ where
         req: &mut http::request::Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
+        tracing::info!("Path {} requires authentication", req.uri.path());
+
+        // Try to get user from session
+        let user = extract_user_from_session(req).await?;
+        if let Some(user) = user {
+            tracing::info!("User found in session");
+            return Ok(user);
+        }
+
+        tracing::info!("No session");
+
         // Get authorization header
         let TypedHeader(auth) = req
             .extract::<TypedHeader<Authorization<Basic>>>()

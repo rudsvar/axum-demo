@@ -3,6 +3,8 @@
 //! If your function interacts with the database or validates user input,
 //! you likely want to return a [`ApiResult`].
 
+use crate::views::index::LoginTemplate;
+
 use super::extract::Json;
 use axum::{
     extract::rejection::{JsonRejection, PathRejection, QueryRejection},
@@ -46,6 +48,9 @@ impl ErrorBody {
 /// An error from our API.
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
+    /// Redirection status code.
+    #[error("{0}")]
+    Redirection(#[from] Redirection),
     /// An error caused by the client.
     #[error("{0}")]
     ClientError(#[from] ClientError),
@@ -62,6 +67,7 @@ impl IntoResponse for ApiError {
                 tracing::error!("internal error: {}", e);
                 e.into_response()
             }
+            ApiError::Redirection(e) => e.into_response(),
         }
     }
 }
@@ -217,6 +223,21 @@ impl IntoResponse for InternalError {
             .headers_mut()
             .insert("Retry-After", HeaderValue::from_static("5"));
         response
+    }
+}
+
+/// A redirection status code.
+#[derive(Debug, thiserror::Error)]
+pub enum Redirection {
+    #[error("not logged in")]
+    ToLogin,
+}
+
+impl IntoResponse for Redirection {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            Self::ToLogin => LoginTemplate::default().into_response(),
+        }
     }
 }
 

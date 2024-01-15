@@ -5,18 +5,14 @@
 </head>
 
 <body>
-    <h1>Home</h1>
-    <p>
-        Welcome, {{ username }}.
-    </p>
-    <p>
-        <a href="/logout">Log out</a>
-    </p>
-    <p>
-        <a href="/api/swagger-ui">Swagger UI</a>
-        <a href="/api/redoc">Redoc</a>
-        <a href="/api/rapidoc">RapiDoc</a>
-    </p>
+    <h1>Welcome, {{ username }}.</h1>
+    <ul>
+        <li><a href="/api/openapi.json">OpenAPI Specification</a></li>
+        <li><a href="/api/swagger-ui">Swagger UI</a></li>
+        <li><a href="/api/redoc">Redoc</a></li>
+        <li><a href="/api/rapidoc">RapiDoc</a></li>
+        <li><a href="logout">Log out</li>
+    </ul>
 </body>
 
 </html>

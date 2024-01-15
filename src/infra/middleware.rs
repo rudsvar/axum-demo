@@ -7,7 +7,7 @@ use crate::{
         error::{ApiError, ClientError},
     },
 };
-use axum::{body::Body, middleware::Next, response::IntoResponse};
+use axum::{body::Body, extract::State, middleware::Next, response::IntoResponse};
 use bytes::Bytes;
 use http::{Request, Response};
 use http_body_util::BodyExt;
@@ -41,11 +41,10 @@ impl<B> MakeSpan<B> for MakeRequestIdSpan {
 const MAX_BODY_SIZE: u64 = 8192;
 
 /// Print and log the request and response.
-#[tracing::instrument(skip(req, next, db))]
 pub(crate) async fn log_request_response(
+    db: State<DbPool>,
     req: Request<Body>,
     next: Next,
-    db: DbPool,
 ) -> Result<impl IntoResponse, ApiError> {
     // Print request
     let (parts, body) = req.into_parts();

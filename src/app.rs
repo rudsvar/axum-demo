@@ -26,13 +26,28 @@
 //! # });
 //! ```
 
+use std::iter;
+use std::time::Duration;
+
 use crate::infra::database::DbPool;
+use crate::infra::error::{InternalError, PanicHandler};
+use crate::infra::middleware::MakeRequestIdSpan;
 use crate::infra::openapi::ApiDoc;
 use crate::infra::{config::Config, state::AppState};
+use axum::error_handling::HandleErrorLayer;
+use axum::response::IntoResponse;
 use axum::Router;
+use http::header::AUTHORIZATION;
 use sqlx::PgPool;
 use tokio::net::TcpListener;
+use tower::ServiceBuilder;
+use tower_http::catch_panic::CatchPanicLayer;
+use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
+use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
+use tower_http::timeout::TimeoutLayer;
+use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tower_sessions::PostgresStore;
+use tracing::Level;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
@@ -40,13 +55,40 @@ use utoipa_swagger_ui::SwaggerUi;
 
 /// Constructs the full axum application.
 pub fn app(state: AppState, session_store: PostgresStore) -> Router {
+    // Fallible middleware from tower, mapped to infallible response with [`HandleErrorLayer`].
+    let tower_middleware = ServiceBuilder::new()
+        .layer(HandleErrorLayer::new(|e| async move {
+            InternalError::Other(format!("Tower middleware failed: {e}")).into_response()
+        }))
+        .concurrency_limit(100);
+
     // The full application with views and a REST API.
     Router::new()
         .nest("/", crate::views::views(state.clone(), session_store))
         .merge(SwaggerUi::new("/api/swagger-ui").url("/api/openapi.json", ApiDoc::openapi()))
         .merge(Redoc::with_url("/api/redoc", ApiDoc::openapi()))
         .merge(RapiDoc::new("/api/openapi.json").path("/api/rapidoc"))
-        .nest("/api", crate::api::api(state))
+        .nest("/api", crate::api::api(state.clone()))
+        // Layers
+        .layer(TimeoutLayer::new(Duration::from_secs(10)))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::infra::middleware::log_request_response,
+        ))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(MakeRequestIdSpan)
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(DefaultOnResponse::new().level(Level::INFO))
+                .on_failure(()),
+        )
+        .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+        .layer(SetSensitiveRequestHeadersLayer::new(iter::once(
+            AUTHORIZATION,
+        )))
+        .layer(tower_middleware)
+        .layer(CatchPanicLayer::custom(PanicHandler))
 }
 
 /// Starts the axum server.

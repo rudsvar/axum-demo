@@ -1,9 +1,5 @@
 use askama::Template;
-use axum::{
-    extract::{Query, State},
-    response::{IntoResponse, Redirect},
-    Form, Router,
-};
+use axum::{extract::State, response::Redirect, Form, Router};
 use axum_extra::routing::{RouterExt, TypedPath};
 use serde::Deserialize;
 use tower_sessions::Session;
@@ -24,10 +20,16 @@ pub fn routes() -> Router<AppState> {
 
 const SESSION_USER_KEY: &str = "user";
 
-#[derive(Template)]
+#[derive(Template, Default)]
 #[template(path = "login.html")]
 pub struct LoginTemplate {
     error: String,
+}
+
+impl LoginTemplate {
+    pub fn with_error(error: String) -> Self {
+        Self { error }
+    }
 }
 
 #[derive(TypedPath)]
@@ -67,28 +69,11 @@ pub struct IndexTemplate {
 #[typed_path("/", rejection(ClientError))]
 pub struct Index;
 
-#[derive(Deserialize)]
-pub struct IndexParams {
-    pub error: Option<String>,
-}
-
-pub async fn index(
-    _: Index,
-    session: Session,
-    Query(params): Query<IndexParams>,
-) -> impl IntoResponse {
-    // TODO: use a middleware to redirect to /login if the user is not logged in
-    let Some(user) = session.get::<User>(SESSION_USER_KEY).await.unwrap() else {
-        return LoginTemplate {
-            error: params.error.unwrap_or_default(),
-        }
-        .into_response();
-    };
+pub async fn index(_: Index, user: User) -> IndexTemplate {
     // Display user information
     IndexTemplate {
         username: user.username().to_string(),
     }
-    .into_response()
 }
 
 #[derive(TypedPath)]
