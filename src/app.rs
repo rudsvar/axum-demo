@@ -5,9 +5,9 @@
 //! Hello API.
 //!
 //! ```rust
-//! # use axum_demo::feature::hello::hello_api::Greeting;
+//! # use axum_demo::api::hello::hello_api::Greeting;
 //! # tokio_test::block_on(async {
-//! # let url = axum_demo::server::spawn_app().await;
+//! # let url = axum_demo::app::spawn_app().await;
 //! let response = reqwest::get(format!("{}/hello", url)).await.unwrap();
 //! assert_eq!(200, response.status());
 //! assert_eq!(Greeting::new("Hello, World!".to_string()), response.json::<Greeting>().await.unwrap());
@@ -17,103 +17,32 @@
 //! Hello API with name.
 //!
 //! ```rust
-//! # use axum_demo::feature::hello::hello_api::Greeting;
+//! # use axum_demo::api::hello::hello_api::Greeting;
 //! # tokio_test::block_on(async {
-//! # let url = axum_demo::server::spawn_app().await;
+//! # let url = axum_demo::app::spawn_app().await;
 //! let response = reqwest::get(format!("{}/hello?name=Foo", url)).await.unwrap();
 //! assert_eq!(200, response.status());
 //! assert_eq!(Greeting::new("Hello, Foo!".to_string()), response.json::<Greeting>().await.unwrap());
 //! # });
 //! ```
 
-use crate::feature::hello::hello_api;
-use crate::feature::home::home_api;
-use crate::feature::info::info_api;
-use crate::feature::item::item_api;
-use crate::feature::url::url_api;
-use crate::feature::user::user_api;
 use crate::infra::database::DbPool;
 use crate::infra::openapi::ApiDoc;
-use crate::{
-    infra::middleware::{log_request_response, MakeRequestIdSpan},
-    infra::{
-        config::Config,
-        error::{InternalError, PanicHandler},
-        state::AppState,
-    },
-};
-use axum::middleware::Next;
-use axum::{error_handling::HandleErrorLayer, response::IntoResponse, Router};
-use hyper::header::AUTHORIZATION;
+use crate::infra::{config::Config, state::AppState};
+use axum::Router;
 use sqlx::PgPool;
-use std::{iter::once, time::Duration};
 use tokio::net::TcpListener;
-use tower::ServiceBuilder;
-use tower_http::{
-    catch_panic::CatchPanicLayer,
-    request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
-    sensitive_headers::SetSensitiveRequestHeadersLayer,
-    timeout::TimeoutLayer,
-    trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
-};
-use tower_sessions::{Expiry, PostgresStore, SessionManagerLayer};
-use tracing::Level;
+use tower_sessions::PostgresStore;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-/// Constructs the full REST API including middleware.
-pub fn rest_api(state: AppState) -> Router {
-    let db = state.db().clone();
-
-    // Fallible middleware from tower, mapped to infallible response with [`HandleErrorLayer`].
-    let tower_middleware = ServiceBuilder::new()
-        .layer(HandleErrorLayer::new(|e| async move {
-            InternalError::Other(format!("Tower middleware failed: {e}")).into_response()
-        }))
-        .concurrency_limit(100);
-
-    // Our API
-    Router::new()
-        .merge(info_api::routes())
-        .merge(hello_api::routes())
-        .merge(item_api::routes())
-        .merge(user_api::routes())
-        .merge(url_api::routes())
-        .with_state(state)
-        // Layers
-        .layer(TimeoutLayer::new(Duration::from_secs(10)))
-        .layer(axum::middleware::from_fn(move |req, next: Next| {
-            log_request_response(req, next, db.clone())
-        }))
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(MakeRequestIdSpan)
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
-                .on_response(DefaultOnResponse::new().level(Level::INFO))
-                .on_failure(()),
-        )
-        .layer(PropagateRequestIdLayer::x_request_id())
-        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
-        .layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
-        .layer(tower_middleware)
-        .layer(CatchPanicLayer::custom(PanicHandler))
-}
-
 /// Constructs the full axum application.
-pub fn app(state: AppState, store: PostgresStore) -> Router {
-    // The full application with some top level routes, a GraphQL API, and a REST API.
-    let swagger_path = "/api";
-    let session_seconds = state.config().server.session_seconds;
-    let expiry = Expiry::OnInactivity(time::Duration::seconds(session_seconds as i64));
-    let session_layer = SessionManagerLayer::new(store).with_expiry(expiry);
+pub fn app(state: AppState, session_store: PostgresStore) -> Router {
+    // The full application with views and a REST API.
     Router::new()
-        .merge(home_api::routes())
-        .layer(session_layer)
-        .with_state(state.clone())
-        // Swagger ui
-        .merge(SwaggerUi::new(swagger_path).url("/api/openapi.json", ApiDoc::openapi()))
-        // API
-        .nest("/api", rest_api(state))
+        .nest("/", crate::views::views(state.clone(), session_store))
+        .merge(SwaggerUi::new("/api").url("/api/openapi.json", ApiDoc::openapi()))
+        .nest("/api", crate::api::api(state))
 }
 
 /// Starts the axum server.
@@ -155,7 +84,7 @@ pub async fn spawn_app_with_db(db: DbPool) -> String {
 mod tests {
     use super::*;
     use crate::{
-        feature::hello::hello_api::Greeting,
+        api::hello::hello_api::Greeting,
         infra::{database::DbPool, error::ErrorBody, state::AppState},
     };
     use axum::{body::Body, Router};

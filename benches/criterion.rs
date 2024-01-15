@@ -1,4 +1,4 @@
-use axum_demo::feature::hello::hello_service::hello;
+use axum_demo::api::hello::hello_service::hello;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn greet_benchmark(c: &mut Criterion) {

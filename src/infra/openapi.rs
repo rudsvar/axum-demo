@@ -1,10 +1,8 @@
 //! OpenAPI configuration.
 
-use crate::feature::item::item_repository;
-use crate::feature::url::url_repository;
-use crate::feature::{
-    hello::hello_api, info::info_api, item::item_api, url::url_api, user::user_api,
-};
+use crate::api::item::item_repository;
+use crate::api::url::url_repository;
+use crate::api::{hello::hello_api, info::info_api, item::item_api, url::url_api, user::user_api};
 use utoipa::{
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
     Modify, OpenApi,

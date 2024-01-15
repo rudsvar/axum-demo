@@ -1,7 +1,7 @@
 //! Implementation of the greeting API. An API that returns a greeting based on a query parameter.
 
 use crate::{
-    feature::hello::hello_service,
+    api::hello::hello_service,
     infra::{
         extract::{Json, Query},
         state::AppState,

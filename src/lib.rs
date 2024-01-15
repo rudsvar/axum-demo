@@ -1,3 +1,4 @@
-pub mod feature;
+pub mod api;
+pub mod app;
 pub mod infra;
-pub mod server;
+pub mod views;

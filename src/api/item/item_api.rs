@@ -1,7 +1,7 @@
 //! The item API implementation.
 
 use crate::{
-    feature::item::{
+    api::item::{
         item_repository::{Item, NewItem},
         item_service,
     },

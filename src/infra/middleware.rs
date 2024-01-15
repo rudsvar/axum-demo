@@ -1,7 +1,7 @@
 //! Middleware for modifying requests and responses.
 
 use crate::{
-    feature::request::request_repository::{self, NewRequest},
+    api::request::request_repository::{self, NewRequest},
     infra::{
         database::DbPool,
         error::{ApiError, ClientError},
