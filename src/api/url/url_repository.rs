@@ -6,8 +6,8 @@ use crate::infra::{
     security::User,
     validation::Valid,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
 use tracing::{instrument, Instrument};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -42,7 +42,7 @@ pub struct ShortUrl {
     pub created_by: i32,
     /// The time the URL was created.
     #[schema(example = "2021-01-01T00:00:00Z")]
-    pub created_at: OffsetDateTime,
+    pub created_at: DateTime<Utc>,
 }
 
 /// Shortens a new URL.

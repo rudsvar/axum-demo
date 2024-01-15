@@ -9,9 +9,9 @@ use axum::{
     http::HeaderValue,
     response::IntoResponse,
 };
+use chrono::{DateTime, Utc};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
 use tower_http::catch_panic::ResponseForPanic;
 use utoipa::ToSchema;
 
@@ -21,14 +21,14 @@ pub struct ErrorBody {
     /// A description of the error.
     message: String,
     /// When the error happened.
-    timestamp: OffsetDateTime,
+    timestamp: DateTime<Utc>,
 }
 
 impl ErrorBody {
     pub(crate) fn new(message: String) -> Self {
         Self {
             message,
-            timestamp: OffsetDateTime::now_utc(),
+            timestamp: Utc::now(),
         }
     }
 
@@ -38,7 +38,7 @@ impl ErrorBody {
     }
 
     /// When the error happened.
-    pub fn timestamp(&self) -> OffsetDateTime {
+    pub fn timestamp(&self) -> DateTime<Utc> {
         self.timestamp
     }
 }
