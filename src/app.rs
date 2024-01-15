@@ -34,6 +34,8 @@ use sqlx::PgPool;
 use tokio::net::TcpListener;
 use tower_sessions::PostgresStore;
 use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
+use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
 /// Constructs the full axum application.
@@ -41,7 +43,9 @@ pub fn app(state: AppState, session_store: PostgresStore) -> Router {
     // The full application with views and a REST API.
     Router::new()
         .nest("/", crate::views::views(state.clone(), session_store))
-        .merge(SwaggerUi::new("/api").url("/api/openapi.json", ApiDoc::openapi()))
+        .merge(SwaggerUi::new("/api/swagger-ui").url("/api/openapi.json", ApiDoc::openapi()))
+        .merge(Redoc::with_url("/api/redoc", ApiDoc::openapi()))
+        .merge(RapiDoc::new("/api/openapi.json").path("/api/rapidoc"))
         .nest("/api", crate::api::api(state))
 }
 
