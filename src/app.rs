@@ -232,7 +232,25 @@ mod tests {
     #[sqlx::test]
     fn swagger_ui_oneshot(db: DbPool) {
         let app = test_app(db);
-        let req = Request::get("/api/index.html").body(Body::empty()).unwrap();
+        let req = Request::get("/api/swagger-ui/index.html")
+            .body(Body::empty())
+            .unwrap();
+        let result = app.oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::OK, result.status())
+    }
+
+    #[sqlx::test]
+    fn redoc_oneshot(db: DbPool) {
+        let app = test_app(db);
+        let req = Request::get("/api/redoc").body(Body::empty()).unwrap();
+        let result = app.oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::OK, result.status())
+    }
+
+    #[sqlx::test]
+    fn rapidoc_oneshot(db: DbPool) {
+        let app = test_app(db);
+        let req = Request::get("/api/rapidoc").body(Body::empty()).unwrap();
         let result = app.oneshot(req).await.unwrap();
         assert_eq!(StatusCode::OK, result.status())
     }
