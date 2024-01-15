@@ -43,16 +43,21 @@ tokio = { version = "1.35.0", features = [
 ] }
 
 # Docs
-utoipa = { version = "4.1.0", features = ["axum_extras", "chrono", "uuid"] }
+utoipa = { version = "4.1.0", features = [
+    "axum_extras",
+    "uuid",
+    "time",
+    "url",
+] }
 utoipa-swagger-ui = { version = "5.0.0", features = ["axum"] }
 
 # Integration
-sqlx = { version = "0.7.2", default_features = false, features = [
+sqlx = { version = "0.7.2", default-features = false, features = [
     "runtime-tokio-rustls",
     "macros",
     "postgres",
     "uuid",
-    "chrono",
+    "time",
     "migrate",
 ] }
 reqwest = { version = "0.11.18", default-features = false, features = ["json"] }
@@ -84,7 +89,6 @@ uuid = { version = "1.6.1", features = ["v4"] }
 bcrypt = "0.15.0"
 thiserror = "1.0.56"
 color-eyre = "0.6.2"
-chrono = { version = "0.4.23", default-features = false, features = ["serde"] }
 cached = { version = "0.47.0", features = ["async"] }
 bytes = "1.5.0"
 futures = "0.3.25"
@@ -95,7 +99,7 @@ validator = { version = "0.16.1", features = ["derive"] }
 base64 = "0.21.2"
 askama = "0.12.1"
 askama_axum = "0.4.0"
-time = "0.3.31"
+time = { version = "0.3.31", features = ["serde"] }
 
 [dev-dependencies]
 criterion = { version = "0.5.1", default-features = false }

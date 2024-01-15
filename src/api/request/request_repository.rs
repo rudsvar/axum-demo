@@ -1,8 +1,8 @@
 //! Types and functions for storing and loading requests from the database.
 
 use crate::infra::{database::Tx, error::ApiResult};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use tracing::instrument;
 
 /// A new request.
@@ -38,7 +38,7 @@ pub struct Request {
     /// The response body.
     pub response_body: Option<String>,
     /// A timestamp of when the request was made.
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: OffsetDateTime,
     /// The response status.
     pub status: i32,
 }
