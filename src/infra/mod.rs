@@ -11,5 +11,6 @@ pub mod middleware;
 pub mod openapi;
 pub mod pagination;
 pub mod security;
+pub mod shutdown;
 pub mod state;
 pub mod validation;

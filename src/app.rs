@@ -99,12 +99,18 @@ pub async fn run_app(
     config: Config,
 ) -> Result<(), hyper::Error> {
     let state = AppState::new(db.clone(), config);
-    let app = app(state, store);
+    let app = app(state, store).into_make_service();
 
     tracing::info!("Starting axum on {}", addr.local_addr().unwrap());
-    if let Err(e) = axum::serve(addr, app.into_make_service()).await {
-        tracing::error!("Server error: {}", e);
+    let exit_result = axum::serve(addr, app)
+        .with_graceful_shutdown(crate::infra::shutdown::shutdown_signal())
+        .await;
+
+    match exit_result {
+        Ok(_) => tracing::info!("Successfully shut down"),
+        Err(e) => tracing::error!("Shutdown failed: {}", e),
     }
+
     Ok(())
 }
 
