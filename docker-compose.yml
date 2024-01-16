@@ -2,6 +2,8 @@ version: '3'
 
 services:
   axum-demo:
+    profiles:
+      - app
     build: .
     ports:
       - 0.0.0.0:8080:8080
