@@ -103,7 +103,7 @@ pub async fn run_app(
 
     tracing::info!("Starting axum on {}", addr.local_addr().unwrap());
     let exit_result = axum::serve(addr, app)
-        .with_graceful_shutdown(crate::infra::shutdown::shutdown_signal())
+        // .with_graceful_shutdown(crate::infra::shutdown::shutdown_signal())
         .await;
 
     match exit_result {

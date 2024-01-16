@@ -1,18 +1,11 @@
-<html>
+{% extends "base.html" %}
 
-<head>
-    <title>Home</title>
-</head>
+{% block title %}Home{% endblock %}
+
+{% block content %}
 
 <body>
     <h1>Welcome, {{ username }}.</h1>
-    <ul>
-        <li><a href="/api/openapi.json">OpenAPI Specification</a></li>
-        <li><a href="/api/swagger-ui">Swagger UI</a></li>
-        <li><a href="/api/redoc">Redoc</a></li>
-        <li><a href="/api/rapidoc">RapiDoc</a></li>
-        <li><a href="logout">Log out</li>
-    </ul>
 </body>
 
-</html>
+{% endblock %}

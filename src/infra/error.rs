@@ -3,13 +3,11 @@
 //! If your function interacts with the database or validates user input,
 //! you likely want to return a [`ApiResult`].
 
-use crate::views::index::LoginTemplate;
-
 use super::extract::Json;
 use axum::{
     extract::rejection::{JsonRejection, PathRejection, QueryRejection},
     http::HeaderValue,
-    response::IntoResponse,
+    response::{IntoResponse, Redirect},
 };
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
@@ -236,7 +234,10 @@ pub enum Redirection {
 impl IntoResponse for Redirection {
     fn into_response(self) -> axum::response::Response {
         match self {
-            Self::ToLogin => LoginTemplate::default().into_response(),
+            Self::ToLogin => {
+                let login = crate::views::login::LoginPath.to_string();
+                Redirect::to(&login).into_response()
+            }
         }
     }
 }
