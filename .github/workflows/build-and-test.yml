@@ -3,8 +3,6 @@ name: Build and Test
 on:
   push:
     branches: [ "**" ]
-  release:
-    types: [ published ]
 
 env:
   CARGO_TERM_COLOR: always
