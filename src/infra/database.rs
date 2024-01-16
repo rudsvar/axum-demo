@@ -32,8 +32,8 @@ pub fn init_db(config: &DatabaseConfig) -> PgPool {
         .log_slow_statements(LevelFilter::Warn, Duration::from_secs(1));
     let db: PgPool = PoolOptions::default()
         .acquire_timeout(Duration::from_secs(1))
-        .min_connections(1)
-        .max_connections(10)
+        .min_connections(5)
+        .max_connections(25)
         .idle_timeout(Duration::from_secs(10 * 60))
         .max_lifetime(Duration::from_secs(30 * 60))
         .connect_lazy_with(db_options);

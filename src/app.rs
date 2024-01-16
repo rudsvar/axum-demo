@@ -60,7 +60,7 @@ pub fn app(state: AppState, session_store: PostgresStore) -> Router {
         .layer(HandleErrorLayer::new(|e| async move {
             InternalError::Other(format!("Tower middleware failed: {e}")).into_response()
         }))
-        .concurrency_limit(100);
+        .concurrency_limit(500);
 
     // The full application with views and a REST API.
     Router::new()
