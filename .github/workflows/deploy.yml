@@ -1,42 +1,18 @@
 name: Deploy
 
 on:
-  # Release
-  release:
-    types: [published]
+  workflow_dispatch:      
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
+    permissions: 
       id-token: write # This is required for requesting the OIDC JWT Token
-      contents: write # Required when GH token is used to authenticate with private repo
+      contents: read # Required when GH token is used to authenticate with private repo
 
     steps:
       - name: Checkout to the branch
-        uses: actions/checkout@v3
-
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Install cargo bump
-        run: cargo install cargo-bump
-
-      - name: Bump version to release version
-        run: |
-          cargo bump "$(echo ${{ github.event.release.tag_name }} | sed 's/^v//')"
-          cargo generate-lockfile
-
-      - name: Commit version bump
-        run: |
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git add Cargo.toml Cargo.lock
-          git commit -m "Bump version to ${{ github.event.release.tag_name }}"
+        uses: actions/checkout@v2
 
       - name: Azure Login
         uses: azure/login@v1
@@ -48,13 +24,13 @@ jobs:
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}
+          appSourcePath: ${{ github.workspace }} 
           registryUrl: rudsvar.azurecr.io
           registryUsername: ${{ secrets.MYAPP_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.MYAPP_REGISTRY_PASSWORD }}
           containerAppName: my-app
           resourceGroup: rudsvar_rg
           imageToBuild: rudsvar.azurecr.io/my-app:${{ github.sha }}
+          
 
-      - name: Push version bump
-        run: git push origin HEAD:${{ github.ref }}
+
