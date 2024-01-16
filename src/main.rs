@@ -35,9 +35,8 @@ async fn main() -> color_eyre::Result<()> {
     tracing::info!("Completed session store migrations");
 
     // Spawn a task to delete expired sessions
-    let session_seconds = config.server.session_seconds;
-    let session_duration = tokio::time::Duration::from_secs(session_seconds as u64);
-    tokio::task::spawn(store.clone().continuously_delete_expired(session_duration));
+    let sixty_secs = Duration::from_secs(60);
+    tokio::task::spawn(store.clone().continuously_delete_expired(sixty_secs));
 
     // Start servers
     let http_address = &config.server.http_address;

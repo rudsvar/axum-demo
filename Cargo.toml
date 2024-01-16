@@ -55,7 +55,7 @@ utoipa-redoc = { version = "3.0.0", features = ["axum"] }
 utoipa-rapidoc = { version = "3.0.0", features = ["axum"] }
 
 # Integration
-sqlx = { version = "0.7.2", default_features = false, features = [
+sqlx = { version = "0.7.2", default-features = false, features = [
     "runtime-tokio-rustls",
     "macros",
     "postgres",
@@ -103,6 +103,7 @@ base64 = "0.21.2"
 askama = "0.12.1"
 askama_axum = "0.4.0"
 time = "0.3.31"
+humantime-serde = "1.1.1"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", default-features = false }

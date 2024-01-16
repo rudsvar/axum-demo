@@ -205,12 +205,7 @@ impl<R> std::fmt::Debug for User<R> {
     }
 }
 
-async fn extract_user_from_session<R>(
-    req: &mut http::request::Parts,
-) -> Result<Option<User<R>>, ApiError>
-where
-    R: Role + Send,
-{
+async fn extract_session(req: &mut http::request::Parts) -> Result<Option<Session>, ApiError> {
     let session = req
         .extract::<Option<Session>>()
         .await
@@ -220,6 +215,13 @@ where
         })
         .unwrap_or(None);
 
+    Ok(session)
+}
+
+async fn extract_user<R>(session: Option<&Session>) -> Result<Option<User<R>>, ApiError>
+where
+    R: Role + Send,
+{
     // If there's a session, get the user from there
     if let Some(session) = session {
         let user = session.get::<User>("user").await.map_err(|e| {
@@ -255,7 +257,8 @@ where
         tracing::info!("Path {} requires authentication", req.uri.path());
 
         // Try to get user from session
-        let user = extract_user_from_session(req).await?;
+        let session = extract_session(req).await?;
+        let user = extract_user(session.as_ref()).await?;
         if let Some(user) = user {
             tracing::info!("User found in session");
             return Ok(user);

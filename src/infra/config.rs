@@ -2,6 +2,7 @@
 
 use axum::extract::FromRef;
 use serde::Deserialize;
+use std::time::Duration;
 
 /// Application configuration.
 #[derive(Clone, Debug, Deserialize, FromRef)]
@@ -24,7 +25,8 @@ pub struct ServerConfig {
     /// Server https port.
     pub grpc_port: u16,
     /// Lifetime of a session in seconds.
-    pub session_seconds: u32,
+    #[serde(with = "humantime_serde")]
+    pub session_duration: Duration,
 }
 
 /// Database configuration.
