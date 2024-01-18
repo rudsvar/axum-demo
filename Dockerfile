@@ -13,13 +13,10 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 ENV SQLX_OFFLINE true
 RUN cargo build --release --bin axum-demo
-# Build docs
-RUN cargo doc --no-deps --release
 
 FROM alpine:3.19 AS runtime
 WORKDIR /app
 COPY --from=builder /app/target/release/axum-demo /usr/local/bin
-COPY --from=builder /app/target/doc doc
 COPY config.toml config.toml
 EXPOSE 80
 ENV RUST_LOG warn,axum_demo=debug
