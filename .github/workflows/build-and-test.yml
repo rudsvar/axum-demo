@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build, test, and deploy
 
 on:
   push:
@@ -12,9 +12,12 @@ env:
   DATABASE_URL: ${{ secrets.DATABASE_URL }} # For sqlx
 
 jobs:
-  build:
-    name: Build
+  build-test-and-deploy:
+    name: Build, test, and deploy
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # This is required for requesting the OIDC JWT Token
+      contents: read # Required when GH token is used to authenticate with private repo
 
     services:
       postgres:
@@ -58,3 +61,30 @@ jobs:
 
       - name: Run cargo test
         run: cargo test --release
+
+      # Deploy
+
+      - name: Build
+        if: github.ref == 'refs/heads/main'
+        run: SQLX_OFFLINE=true cargo build --release
+
+      - name: Azure Login
+        if: github.ref == 'refs/heads/main'
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.MYAPP_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.MYAPP_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.MYAPP_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        if: github.ref == 'refs/heads/main'
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          registryUrl: rudsvar.azurecr.io
+          registryUsername: ${{ secrets.MYAPP_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.MYAPP_REGISTRY_PASSWORD }}
+          containerAppName: my-app
+          resourceGroup: rudsvar_rg
+          imageToBuild: rudsvar.azurecr.io/my-app:${{ github.sha }}
+          dockerfilePath: Dockerfile-no-build
