@@ -87,4 +87,4 @@ jobs:
           containerAppName: my-app
           resourceGroup: rudsvar_rg
           imageToBuild: rudsvar.azurecr.io/my-app:${{ github.sha }}
-          dockerfilePath: Dockerfile-no-build
+          dockerfilePath: Dockerfile-prebuilt
