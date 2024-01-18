@@ -1,11 +1,10 @@
-FROM debian:buster-slim
+FROM ubuntu:latest
 
 # Copy prebuilt resources
-COPY target/release/axum-demo .
-COPY target/doc/axum_demo doc
-COPY config.toml .
+COPY target/release/axum-demo /usr/local/bin/axum-demo
+COPY config.toml config.toml
 
-# Set environment variables
-ENV RUST_LOG info,axum_web_demo=debug,sqlx=off
-
-ENTRYPOINT ["./axum-demo"]
+EXPOSE 80
+ENV RUST_LOG warn,axum_demo=debug
+ENV APP__SERVER__HTTP_PORT 80
+ENTRYPOINT ["/usr/local/bin/axum-demo"]
