@@ -30,17 +30,15 @@ use std::iter;
 use std::time::Duration;
 
 use crate::infra::database::DbPool;
-use crate::infra::error::{InternalError, PanicHandler};
+use crate::infra::error::PanicHandler;
 use crate::infra::middleware::MakeRequestIdSpan;
 use crate::infra::openapi::ApiDoc;
 use crate::infra::{config::Config, state::AppState};
-use axum::error_handling::HandleErrorLayer;
-use axum::response::IntoResponse;
 use axum::Router;
 use http::header::AUTHORIZATION;
 use sqlx::PgPool;
 use tokio::net::TcpListener;
-use tower::ServiceBuilder;
+use tower::limit::ConcurrencyLimitLayer;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
@@ -55,14 +53,6 @@ use utoipa_swagger_ui::SwaggerUi;
 
 /// Constructs the full axum application.
 pub fn app(state: AppState, session_store: PostgresStore) -> Router {
-    // Fallible middleware from tower, mapped to infallible response with [`HandleErrorLayer`].
-    let tower_middleware = ServiceBuilder::new()
-        .layer(HandleErrorLayer::new(|e| async move {
-            InternalError::Other(format!("Tower middleware failed: {e}")).into_response()
-        }))
-        .concurrency_limit(500);
-
-    // The full application with views and a REST API.
     Router::new()
         .nest("/", crate::views::views(state.clone(), session_store))
         .merge(SwaggerUi::new("/api/swagger-ui").url("/api/openapi.json", ApiDoc::openapi()))
@@ -87,7 +77,7 @@ pub fn app(state: AppState, session_store: PostgresStore) -> Router {
         .layer(SetSensitiveRequestHeadersLayer::new(iter::once(
             AUTHORIZATION,
         )))
-        .layer(tower_middleware)
+        .layer(ConcurrencyLimitLayer::new(100))
         .layer(CatchPanicLayer::custom(PanicHandler))
 }
 
