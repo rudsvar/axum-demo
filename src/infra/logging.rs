@@ -27,6 +27,7 @@ pub fn init_logging(jaeger_config: &JaegerConfig) -> LogGuard {
     let opentelemetry_tracer = opentelemetry_jaeger::new_agent_pipeline()
         .with_endpoint(jaeger_endpoint)
         .with_service_name(app_name)
+        .with_auto_split_batch(true)
         .install_batch(opentelemetry_sdk::runtime::Tokio)
         .unwrap();
     let opentelemetry = tracing_opentelemetry::layer()

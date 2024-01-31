@@ -92,19 +92,24 @@ pub(crate) async fn log_request_response(
         res = Response::from_parts(parts, body);
         None
     };
+    let status = res.status().as_u16() as i32;
 
-    // Log request
-    let mut tx = db.begin().await?;
-    let new_req = NewRequest {
-        host,
-        method,
-        uri,
-        request_body: req_string,
-        response_body: res_string,
-        status: res.status().as_u16() as i32,
-    };
-    let _ = request_repository::log_request(&mut tx, new_req).await?;
-    tx.commit().await?;
+    // Log request asynchronously
+    tokio::spawn(async move {
+        let mut tx = db.begin().await.unwrap();
+        let new_req = NewRequest {
+            host,
+            method,
+            uri,
+            request_body: req_string,
+            response_body: res_string,
+            status,
+        };
+        let _ = request_repository::log_request(&mut tx, new_req)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+    });
 
     Ok(res)
 }
