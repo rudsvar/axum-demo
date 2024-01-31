@@ -45,7 +45,7 @@ pub struct Request {
 
 /// Creates a new item.
 #[instrument(skip(tx, new_req))]
-pub async fn log_request(tx: &mut Tx, new_req: NewRequest) -> ApiResult<Request> {
+pub async fn log_request(tx: &mut Tx, new_req: &NewRequest) -> ApiResult<Request> {
     tracing::trace!("Logging request");
     let req = sqlx::query_as!(
         Request,
@@ -78,7 +78,7 @@ mod tests {
         let mut tx = db.begin().await.unwrap();
         let req = log_request(
             &mut tx,
-            NewRequest {
+            &NewRequest {
                 host: "self".to_string(),
                 method: "get".to_string(),
                 uri: "/foo/bar".to_string(),

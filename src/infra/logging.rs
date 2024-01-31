@@ -28,6 +28,7 @@ pub fn init_logging(jaeger_config: &JaegerConfig) -> LogGuard {
         .with_endpoint(jaeger_endpoint)
         .with_service_name(app_name)
         .with_auto_split_batch(true)
+        .with_max_packet_size(8192)
         .install_batch(opentelemetry_sdk::runtime::Tokio)
         .unwrap();
     let opentelemetry = tracing_opentelemetry::layer()

@@ -14,6 +14,8 @@ use http_body_util::BodyExt;
 use hyper::body::Body as _;
 use tower_http::trace::MakeSpan;
 
+use super::error::ApiResult;
+
 static X_REQUEST_ID: &str = "x-request-id";
 
 #[derive(Clone)]
@@ -96,7 +98,6 @@ pub(crate) async fn log_request_response(
 
     // Log request asynchronously
     tokio::spawn(async move {
-        let mut tx = db.begin().await.unwrap();
         let new_req = NewRequest {
             host,
             method,
@@ -105,13 +106,20 @@ pub(crate) async fn log_request_response(
             response_body: res_string,
             status,
         };
-        let _ = request_repository::log_request(&mut tx, new_req)
-            .await
-            .unwrap();
-        tx.commit().await.unwrap();
+        if let Err(e) = store_request(db, &new_req).await {
+            tracing::error!("Failed to store request: {:?}: {}", new_req, e);
+        }
     });
 
     Ok(res)
+}
+
+/// Store a request in the database.
+async fn store_request(db: State<DbPool>, new_req: &NewRequest) -> ApiResult<()> {
+    let mut tx = db.begin().await?;
+    let _ = request_repository::log_request(&mut tx, new_req).await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 /// Read the entire request body stream and store it in memory.
