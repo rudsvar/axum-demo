@@ -331,6 +331,7 @@ dependencies = [
  "hyper 1.1.0",
  "opentelemetry",
  "opentelemetry-jaeger",
+ "opentelemetry_sdk",
  "reqwest",
  "serde",
  "serde_json",
@@ -1929,6 +1930,7 @@ dependencies = [
  "opentelemetry-semantic-conventions",
  "opentelemetry_sdk",
  "thrift",
+ "tokio",
 ]
 
 [[package]]
@@ -1942,9 +1944,9 @@ dependencies = [
 
 [[package]]
 name = "opentelemetry_sdk"
-version = "0.21.1"
+version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "968ba3f2ca03e90e5187f5e4f46c791ef7f2c163ae87789c8ce5f5ca3b7b7de5"
+checksum = "2f16aec8a98a457a52664d69e0091bac3a0abd18ead9b641cb00202ba4e0efe4"
 dependencies = [
  "async-trait",
  "crossbeam-channel",
@@ -1957,6 +1959,8 @@ dependencies = [
  "percent-encoding",
  "rand",
  "thiserror",
+ "tokio",
+ "tokio-stream",
 ]
 
 [[package]]
