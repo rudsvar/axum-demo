@@ -11,6 +11,8 @@ pub struct Config {
     pub server: ServerConfig,
     /// Database configuration.
     pub database: DatabaseConfig,
+    /// Jaeger configuration.
+    pub jaeger: JaegerConfig,
 }
 
 /// Server configuration.
@@ -42,6 +44,15 @@ pub struct DatabaseConfig {
     pub database_name: String,
     /// The database host.
     pub host: String,
+}
+
+/// Jaeger configuration.
+#[derive(Clone, Debug, Deserialize)]
+pub struct JaegerConfig {
+    /// The jaeger host.
+    pub host: String,
+    /// The jaeger port.
+    pub port: u16,
 }
 
 /// Retrieve [`Config`] from the default configuration file.

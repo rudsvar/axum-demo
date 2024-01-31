@@ -14,8 +14,8 @@ async fn main() -> color_eyre::Result<()> {
     dotenv::dotenv().ok();
     color_eyre::install()?;
 
-    let _guard = infra::logging::init_logging();
     let config = infra::config::load_config()?;
+    let _guard = infra::logging::init_logging(&config.jaeger);
     let db = infra::database::init_db(&config.database);
 
     let store = tower_sessions::PostgresStore::new(db.clone());

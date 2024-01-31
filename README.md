@@ -7,13 +7,22 @@ any missing migrations, and finally run the application itself.
 All three steps are listed below.
 
 ```shell
-docker compose up -d db
+docker compose up -d
 sqlx database setup
 cargo run
 ```
 
 You can install `sqlx` with `cargo install sqlx-cli`.
 When the application is up and running, visit `localhost:8080`.
+
+
+# Docker
+```
+# Run a single instance of the application
+docker compose up --build axum-demo
+# Run multiple instances with an nginx load balancer
+docker compose up --build axum-demo nginx --scale axum-demo=5
+```
 
 # Benchmarks
 

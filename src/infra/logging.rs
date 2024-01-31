@@ -4,6 +4,8 @@ use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
+use super::config::JaegerConfig;
+
 /// Flushes logs upon being dropped.
 #[derive(Debug)]
 pub struct LogGuard {
@@ -11,7 +13,7 @@ pub struct LogGuard {
 }
 
 /// Initializes logging.
-pub fn init_logging() -> LogGuard {
+pub fn init_logging(jaeger_config: &JaegerConfig) -> LogGuard {
     let log_level = std::env::var("RUST_LOG")
         .unwrap_or_else(|_| "info,tower_http=trace,axum_demo=debug".into());
 
@@ -21,7 +23,9 @@ pub fn init_logging() -> LogGuard {
         .with_filter(EnvFilter::new(log_level.clone()));
 
     let app_name = env!("CARGO_PKG_NAME");
+    let jaeger_endpoint = format!("{}:{}", jaeger_config.host, jaeger_config.port);
     let opentelemetry_tracer = opentelemetry_jaeger::new_agent_pipeline()
+        .with_endpoint(jaeger_endpoint)
         .with_service_name(app_name)
         .install_simple()
         .unwrap();

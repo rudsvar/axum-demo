@@ -1,15 +1,19 @@
 version: '3'
 
 services:
+
   axum-demo:
     profiles:
       - app
     build: .
     ports:
-      - 0.0.0.0:8080:8080
+      - 8080:8080
     environment:
+      - APP__SERVER__HTTP_PORT=8080
       - APP__DATABASE__HOST=postgres
-      - APP__MQ__HOST=postgres
+      - APP__JAEGER__HOST=jaeger
+      - APP__MQ__HOST=rabbitmq
+
   postgres:
     image: postgres:14
     ports:
@@ -17,6 +21,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+
   jaeger:
     image: jaegertracing/all-in-one:1.37
     ports:
@@ -27,6 +32,7 @@ services:
       - 16686:16686
       - 14268:14268
       - 9411:9411
+
   rabbitmq:
     image: rabbitmq:3.11.5-management
     hostname: rabbitmq
@@ -34,3 +40,12 @@ services:
       - 15672:15672
       - 15692:15692
       - 5672:5672
+
+  nginx:
+    profiles:
+      - app
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8081:8081

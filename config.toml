@@ -12,6 +12,10 @@ username = "postgres"
 password = "password"
 database_name = "axum-demo"
 
+[jaeger]
+host = "localhost"
+port = 6831
+
 [mq]
 host = "localhost"
 port = 5672
