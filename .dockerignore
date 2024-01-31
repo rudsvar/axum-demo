@@ -3,3 +3,6 @@ logs
 .env
 !target/release/axum-demo
 !target/doc/axum_demo
+docker-compose.yml
+nginx.conf
+README.md

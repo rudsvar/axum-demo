@@ -18,9 +18,9 @@ When the application is up and running, visit `localhost:8080`.
 
 # Docker
 ```
-# Run a single instance of the application
-docker compose up --build axum-demo
-# Run multiple instances with an nginx load balancer
+# Run a single instance with nginx as a proxy
+docker compose up --build axum-demo nginx
+# Run multiple instances wihh nginx as a load balancer
 docker compose up --build axum-demo nginx --scale axum-demo=5
 ```
 
