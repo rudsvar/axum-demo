@@ -127,7 +127,7 @@ pub async fn delete_item(tx: &mut Tx, id: i32) -> ApiResult<()> {
 }
 
 /// Lists all items.
-#[instrument(skip(tx))]
+#[instrument(skip_all)]
 pub async fn list_items(tx: &mut Tx, params: &PaginationParams) -> ApiResult<Vec<Item>> {
     tracing::info!("Listing items");
     let items = sqlx::query_as!(

@@ -17,11 +17,31 @@ When the application is up and running, visit `localhost:8080`.
 
 
 # Docker
+
+Running the application with `docker compose`.
+
 ```
 # Run a single instance with nginx as a proxy
 docker compose up --build axum-demo nginx
 # Run multiple instances wihh nginx as a load balancer
 docker compose up --build axum-demo nginx --scale axum-demo=5
+```
+
+# Swarm
+
+You can run the entire stack with swarm,
+
+```
+docker compose up --build axum-demo
+docker stack deploy mystack --compose-file stack.yml
+docker service ls
+docker service logs mystack_axum-demo --tail 0 --follow
+```
+
+and remove it with
+
+```
+docker stack rm mystack
 ```
 
 # Benchmarks
