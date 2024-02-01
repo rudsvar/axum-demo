@@ -6,11 +6,17 @@ services:
     profiles:
       - app
     build: .
+    ports:
+      - 3000
     environment:
       - APP__SERVER__HTTP_PORT=3000
       - APP__DATABASE__HOST=postgres
       - APP__JAEGER__HOST=jaeger
       - APP__MQ__HOST=rabbitmq
+    depends_on:
+      - postgres
+      - jaeger
+      - rabbitmq
 
   postgres:
     image: postgres:14
@@ -47,3 +53,12 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - 8080:8080
+    healthcheck:
+      test: curl -f http://nginx:8080/api/hello || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 1s
+    depends_on:
+      - axum-demo

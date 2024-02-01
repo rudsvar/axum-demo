@@ -22,9 +22,9 @@ Running the application with `docker compose`.
 
 ```
 # Run a single instance with nginx as a proxy
-docker compose up --build axum-demo nginx
+docker-compose up --build nginx axum-demo
 # Run multiple instances wihh nginx as a load balancer
-docker compose up --build axum-demo nginx --scale axum-demo=5
+docker-compose up --build nginx axum-demo --scale axum-demo=10
 ```
 
 # Swarm
