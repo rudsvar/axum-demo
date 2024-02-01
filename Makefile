@@ -10,6 +10,11 @@ run:
 run-release:
 	cargo run --release
 
+SCALE=1
+
+run-docker:
+	docker-compose up --build nginx axum-demo --scale axum-demo=${SCALE}
+
 test:
 	cargo test
 
