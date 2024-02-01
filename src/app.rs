@@ -52,9 +52,9 @@ use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
 /// Constructs the full axum application.
-pub fn app(state: AppState, session_store: PostgresStore) -> Router {
+pub fn app(state: AppState, config: Config, store: PostgresStore) -> Router {
     Router::new()
-        .nest("/", crate::views::views(state.clone(), session_store))
+        .nest("/", crate::views::views(state.clone(), config, store))
         .merge(SwaggerUi::new("/api/swagger-ui").url("/api/openapi.json", ApiDoc::openapi()))
         .merge(Redoc::with_url("/api/redoc", ApiDoc::openapi()))
         .merge(RapiDoc::new("/api/openapi.json").path("/api/rapidoc"))
@@ -86,10 +86,10 @@ pub async fn run_app(
     addr: TcpListener,
     db: PgPool,
     store: PostgresStore,
-    config: Config,
-) -> Result<(), hyper::Error> {
-    let state = AppState::new(db.clone(), config);
-    let app = app(state, store).into_make_service();
+) -> color_eyre::Result<()> {
+    let state = AppState::new(db.clone());
+    let config = crate::infra::config::load_config()?;
+    let app = app(state, config, store).into_make_service();
 
     tracing::info!("Starting axum on {}", addr.local_addr().unwrap());
     let exit_result = axum::serve(addr, app)
@@ -116,9 +116,8 @@ pub async fn spawn_app_with_db(db: DbPool) -> String {
     let address = "127.0.0.1";
     let listener = TcpListener::bind(format!("{address}:0")).await.unwrap();
     let port = listener.local_addr().unwrap().port();
-    let config = crate::infra::config::load_config().unwrap();
     let store = PostgresStore::new(db.clone());
-    tokio::spawn(run_app(listener, db, store, config));
+    tokio::spawn(run_app(listener, db, store));
     format!("http://{address}:{port}/api")
 }
 
@@ -137,10 +136,10 @@ mod tests {
     use tower::ServiceExt;
 
     fn test_app(db: DbPool) -> Router {
-        let config = crate::infra::config::load_config().unwrap();
         let store = PostgresStore::new(db.clone());
-        let state = AppState::new(db, config);
-        app(state, store)
+        let config = crate::infra::config::load_config().unwrap();
+        let state = AppState::new(db);
+        app(state, config, store)
     }
 
     async fn get<T: for<'a> Deserialize<'a>>(url: &str) -> T {

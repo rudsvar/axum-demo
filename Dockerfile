@@ -19,6 +19,5 @@ WORKDIR /app
 COPY --from=builder /app/target/release/axum-demo /usr/local/bin
 COPY config.toml config.toml
 EXPOSE 80
-ENV RUST_LOG warn,axum_demo=debug
 ENV APP__SERVER__HTTP_PORT 80
 ENTRYPOINT ["/usr/local/bin/axum-demo"]

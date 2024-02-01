@@ -12,9 +12,10 @@ username = "postgres"
 password = "password"
 database_name = "axum-demo"
 
-[jaeger]
-host = "localhost"
-port = 6831
+[logging]
+rust_log = "info,tower_http=trace,axum_demo=debug"
+jaeger_host = "localhost"
+jaeger_port = 6831
 
 [mq]
 host = "localhost"

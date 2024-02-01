@@ -15,7 +15,7 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let config = infra::config::load_config()?;
-    let _guard = infra::logging::init_logging(&config.jaeger);
+    let _guard = infra::logging::init_logging(&config.logging);
     let db = infra::database::init_db(&config.database);
 
     let store = tower_sessions::PostgresStore::new(db.clone());
@@ -43,7 +43,7 @@ async fn main() -> color_eyre::Result<()> {
     let http_port = &config.server.http_port;
     let addr = format!("{}:{}", http_address, http_port);
     let listener = TcpListener::bind(addr).await?;
-    axum_demo::app::run_app(listener, db, store, config.clone()).await?;
+    axum_demo::app::run_app(listener, db, store).await?;
 
     Ok(())
 }

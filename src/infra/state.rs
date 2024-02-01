@@ -12,14 +12,13 @@ use reqwest::Client;
 pub struct AppState {
     db: DbPool,
     client: Client,
-    config: Config,
 }
 
 impl AppState {
     /// Constructs a new [`AppState`].
-    pub fn new(db: DbPool, config: Config) -> Self {
+    pub fn new(db: DbPool) -> Self {
         let client = reqwest::Client::new();
-        Self { db, client, config }
+        Self { db, client }
     }
 
     /// Returns the database pool.
@@ -32,8 +31,8 @@ impl AppState {
         &self.client
     }
 
-    /// Returns the application config.
-    pub fn config(&self) -> &Config {
-        &self.config
+    /// Loads the application configuration.
+    pub fn config(&self) -> color_eyre::Result<Config> {
+        crate::infra::config::load_config()
     }
 }
