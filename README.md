@@ -32,7 +32,7 @@ docker compose up --build axum-demo nginx --scale axum-demo=5
 You can run the entire stack with swarm,
 
 ```
-docker compose up --build axum-demo
+docker compose build axum-demo
 docker stack deploy mystack --compose-file stack.yml
 docker service ls
 docker service logs mystack_axum-demo --tail 0 --follow
