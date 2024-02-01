@@ -44,7 +44,7 @@ const MAX_BODY_SIZE: u64 = 8192;
 
 /// Print and log the request and response.
 pub(crate) async fn log_request_response(
-    db: State<DbPool>,
+    State(db): State<DbPool>,
     req: Request<Body>,
     next: Next,
 ) -> Result<impl IntoResponse, ApiError> {
@@ -107,7 +107,7 @@ pub(crate) async fn log_request_response(
             status,
         };
         if let Err(e) = store_request(db, &new_req).await {
-            tracing::error!("Failed to store request: {:?}: {}", new_req, e);
+            tracing::error!("Failed to store request: {}", e);
         }
     });
 
@@ -115,7 +115,7 @@ pub(crate) async fn log_request_response(
 }
 
 /// Store a request in the database.
-async fn store_request(db: State<DbPool>, new_req: &NewRequest) -> ApiResult<()> {
+async fn store_request(db: DbPool, new_req: &NewRequest) -> ApiResult<()> {
     let mut tx = db.begin().await?;
     let _ = request_repository::log_request(&mut tx, new_req).await?;
     tx.commit().await?;
