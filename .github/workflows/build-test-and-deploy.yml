@@ -53,14 +53,22 @@ jobs:
             --no-default-features \
             --locked
 
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+
       - name: Set up database
         run: sqlx database setup
 
       - name: Check sqlx-data.json
         run: cargo sqlx prepare --check -- --lib
 
-      - name: Run cargo test
-        run: cargo test --release
+      - name: Run tests (with tarpaulin)
+        run: cargo tarpaulin --release --out xml
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v2
+        with:
+          fail_ci_if_error: true
 
       # Deploy
 
