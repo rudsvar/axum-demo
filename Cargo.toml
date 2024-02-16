@@ -85,7 +85,7 @@ opentelemetry-jaeger = { version = "0.20.0", features = ["rt-tokio"] }
 opentelemetry = { version = "0.21.0", default-features = false, features = ["trace"] }
 
 # Utilities
-config = "0.13.2"
+config = "0.14.0"
 uuid = { version = "1.7.0", features = ["v4"] }
 bcrypt = "0.15.0"
 thiserror = "1.0.56"
