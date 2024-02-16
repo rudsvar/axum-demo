@@ -36,7 +36,7 @@ tower-sessions = { version = "0.9.1", features = [
 http = "1.0.0"
 http-body-util = "0.1.0"
 hyper = "1.1.0"
-tokio = { version = "1.35.0", features = [
+tokio = { version = "1.36.0", features = [
     "macros",
     "rt-multi-thread",
     "signal",
