@@ -63,13 +63,12 @@ jobs:
         run: cargo sqlx prepare --check -- --lib
 
       - name: Run tests (with tarpaulin)
-        run: cargo tarpaulin --release --out xml
+        run: cargo tarpaulin --release --out xml --skip-clean
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
 
       # - name: Coveralls
       #   uses: coverallsapp/github-action@v2
