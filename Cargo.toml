@@ -29,10 +29,8 @@ tower-http = { version = "0.5.0", features = [
     "timeout",
     "fs",
 ] }
-tower-sessions = { version = "0.9.1", features = [
-    "postgres-store",
-    "deletion-task",
-] }
+tower-sessions = { version = "0.10.2" }
+tower-sessions-sqlx-store = { version = "0.10.0", features = ["postgres"] }
 http = "1.0.0"
 http-body-util = "0.1.0"
 hyper = "1.1.0"
@@ -82,7 +80,9 @@ tracing-error = "0.2.0"
 console-subscriber = "0.2.0"
 opentelemetry_sdk = { version = "0.21.2", features = ["rt-tokio"] }
 opentelemetry-jaeger = { version = "0.20.0", features = ["rt-tokio"] }
-opentelemetry = { version = "0.21.0", default-features = false, features = ["trace"] }
+opentelemetry = { version = "0.21.0", default-features = false, features = [
+    "trace",
+] }
 
 # Utilities
 config = "0.14.0"

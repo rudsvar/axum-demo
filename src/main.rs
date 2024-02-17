@@ -18,7 +18,7 @@ async fn main() -> color_eyre::Result<()> {
     let _guard = infra::logging::init_logging(&config.logging);
     let db = infra::database::init_db(&config.database);
 
-    let store = tower_sessions::PostgresStore::new(db.clone());
+    let store = tower_sessions_sqlx_store::PostgresStore::new(db.clone());
 
     // Run normal migrations
     while let Err(e) = MIGRATOR.run(&db).await {

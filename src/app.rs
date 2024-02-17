@@ -44,7 +44,7 @@ use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetReques
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tower_sessions::PostgresStore;
+use tower_sessions_sqlx_store::PostgresStore;
 use tracing::Level;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
