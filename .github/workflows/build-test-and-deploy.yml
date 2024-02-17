@@ -64,7 +64,7 @@ jobs:
         run: sqlx database setup
 
       - name: Check sqlx-data.json
-        run: cargo sqlx prepare --check -- --lib
+        run: cargo sqlx prepare --check -- --lib --release
 
       - name: Run tests (with tarpaulin)
         run: cargo tarpaulin --release --out xml --skip-clean
