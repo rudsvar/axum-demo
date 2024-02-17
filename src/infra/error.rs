@@ -100,9 +100,9 @@ impl From<validator::ValidationErrors> for ApiError {
                 codes += &format!("{},", e.code);
             }
             let codes = codes.trim_end_matches(',');
-            invalid_fields += &format!("{k} ({codes}),");
+            invalid_fields += &format!("{k} ({codes}), ");
         }
-        let invalid_fields = invalid_fields.trim_end_matches(',');
+        let invalid_fields = invalid_fields.trim_end_matches(", ");
         ApiError::ClientError(ClientError::UnprocessableEntity(format!(
             "invalid field(s): {invalid_fields}"
         )))
@@ -254,5 +254,32 @@ impl ResponseForPanic for PanicHandler {
         _: Box<dyn std::any::Any + Send + 'static>,
     ) -> http::Response<Self::ResponseBody> {
         ApiError::InternalError(InternalError::Other("Panic".to_string())).into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use validator::ValidationError;
+
+    use super::*;
+
+    #[test]
+    fn new_error_is_within_a_minute_ago() {
+        let error = ErrorBody::new("test".to_string());
+        let now = Utc::now();
+        assert!(now.signed_duration_since(error.timestamp).num_seconds() < 60);
+    }
+
+    #[test]
+    fn validation_errors_gives_useful_message() {
+        let mut errors = validator::ValidationErrors::new();
+        errors.add("field1", ValidationError::new("error1"));
+        errors.add("field1", ValidationError::new("error2"));
+        errors.add("field2", ValidationError::new("error3"));
+        let error: ApiError = errors.into();
+        assert_eq!(
+            "invalid field(s): field1 (error1,error2), field2 (error3)",
+            error.to_string(),
+        );
     }
 }
