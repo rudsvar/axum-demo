@@ -74,7 +74,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Coveralls
+      - name: Upload to coveralls.io
         uses: coverallsapp/github-action@v2
 
       # Deploy
