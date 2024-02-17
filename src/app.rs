@@ -44,6 +44,7 @@ use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetReques
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tower_sessions::ExpiredDeletion;
 use tower_sessions_sqlx_store::PostgresStore;
 use tracing::Level;
 use utoipa::OpenApi;
@@ -82,15 +83,27 @@ pub fn app(state: AppState, config: Config, store: PostgresStore) -> Router {
 }
 
 /// Starts the axum server.
-pub async fn run_app(
-    addr: TcpListener,
-    db: PgPool,
-    store: PostgresStore,
-) -> color_eyre::Result<()> {
+pub async fn run_app(addr: TcpListener, db: PgPool) -> color_eyre::Result<()> {
     let state = AppState::new(db.clone());
     let config = crate::infra::config::load_config()?;
+
+    // Set up session store
+    let store = tower_sessions_sqlx_store::PostgresStore::new(db.clone());
+
+    // Run session store migrations
+    while let Err(e) = store.migrate().await {
+        tracing::error!("Failed to run session store migrations: {}", e);
+        tokio::time::sleep(Duration::from_secs(30)).await;
+    }
+    tracing::info!("Completed session store migrations");
+
+    // Spawn a task to delete expired sessions
+    let sixty_secs = Duration::from_secs(60);
+    tokio::task::spawn(store.clone().continuously_delete_expired(sixty_secs));
+
     let app = app(state, config, store).into_make_service();
 
+    // Run server
     tracing::info!("Starting axum on {}", addr.local_addr().unwrap());
     let exit_result = axum::serve(addr, app)
         .with_graceful_shutdown(crate::infra::shutdown::shutdown_signal())
@@ -116,8 +129,7 @@ pub async fn spawn_app_with_db(db: DbPool) -> String {
     let address = "127.0.0.1";
     let listener = TcpListener::bind(format!("{address}:0")).await.unwrap();
     let port = listener.local_addr().unwrap().port();
-    let store = PostgresStore::new(db.clone());
-    tokio::spawn(run_app(listener, db, store));
+    tokio::spawn(run_app(listener, db));
     format!("http://{address}:{port}/api")
 }
 
@@ -130,11 +142,13 @@ mod tests {
             item::item_repository::{Item, NewItem},
         },
         infra::{database::DbPool, error::ErrorBody, state::AppState},
+        views::login::LoginParams,
     };
     use axum::{body::Body, Router};
     use base64::Engine;
     use futures::StreamExt;
     use http::{Request, StatusCode};
+    use reqwest::redirect::Policy;
     use serde::Deserialize;
     use tower::ServiceExt;
 
@@ -542,5 +556,53 @@ mod tests {
             .unwrap();
         let res = app.oneshot(req).await.unwrap();
         assert_eq!(StatusCode::OK, res.status());
+    }
+
+    #[sqlx::test]
+    fn get_login_responds_with_ok(db: DbPool) {
+        let app = test_app(db);
+        let req = Request::get("/login").body(Body::empty()).unwrap();
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::OK, res.status());
+    }
+
+    #[sqlx::test]
+    fn post_login_responds_with_see_other(db: DbPool) {
+        let url = spawn_app_with_db(db).await;
+        let url = url.trim_end_matches("/api");
+        let client = reqwest::ClientBuilder::default()
+            .redirect(Policy::none())
+            .build()
+            .unwrap();
+        let response = client
+            .post(&format!("{url}/login"))
+            .form(&LoginParams {
+                username: "user".to_string(),
+                password: "user".to_string(),
+            })
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(reqwest::StatusCode::SEE_OTHER, response.status());
+    }
+
+    #[sqlx::test]
+    fn post_login_with_wrong_password_responds_with_unauthorized(db: DbPool) {
+        let url = spawn_app_with_db(db).await;
+        let url = url.trim_end_matches("/api");
+        let client = reqwest::ClientBuilder::default()
+            .redirect(Policy::none())
+            .build()
+            .unwrap();
+        let response = client
+            .post(&format!("{url}/login"))
+            .form(&LoginParams {
+                username: "user".to_string(),
+                password: "notuser".to_string(),
+            })
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(reqwest::StatusCode::UNAUTHORIZED, response.status());
     }
 }

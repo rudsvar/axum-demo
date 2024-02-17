@@ -1,7 +1,7 @@
 use askama::Template;
 use axum::{extract::State, response::Redirect, Form, Router};
 use axum_extra::routing::{RouterExt, TypedPath};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 
 use crate::infra::{
@@ -30,7 +30,7 @@ pub async fn get_login(_: LoginPath) -> LoginTemplate {
     LoginTemplate
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct LoginParams {
     pub username: String,
     pub password: String,
@@ -45,10 +45,7 @@ pub async fn post_login(
     let mut tx = db.begin().await.unwrap();
     let username = params.username;
     let password = params.password;
-    let user = match security::authenticate(&mut tx, &username, &password).await {
-        Ok(user) => user,
-        Err(e) => return Ok(Redirect::to(&format!("/?error={}", e))),
-    };
+    let user = security::authenticate(&mut tx, &username, &password).await?;
     session.insert(SESSION_USER_KEY, user).await.unwrap();
     let home = Index.to_string();
     Ok(Redirect::to(&home))

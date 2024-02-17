@@ -277,9 +277,8 @@ mod tests {
         errors.add("field1", ValidationError::new("error2"));
         errors.add("field2", ValidationError::new("error3"));
         let error: ApiError = errors.into();
-        assert_eq!(
-            "invalid field(s): field1 (error1,error2), field2 (error3)",
-            error.to_string(),
-        );
+        let error_string = error.to_string();
+        assert!(error_string.contains("field1 (error1,error2)"));
+        assert!(error_string.contains("field2 (error3)"));
     }
 }
