@@ -2,7 +2,6 @@ use axum::Router;
 use tower_sessions::{Expiry, SessionManagerLayer};
 use tower_sessions_sqlx_store::PostgresStore;
 
-
 use crate::infra::{config::Config, state::AppState};
 
 pub mod index;
