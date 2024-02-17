@@ -354,15 +354,23 @@ mod tests {
 
     #[sqlx::test]
     fn create_item_responds_with_created(db: DbPool) {
-        let app = test_app(db);
-        let auth = base64::engine::general_purpose::STANDARD.encode("user:user");
-        let req: Request<Body> = Request::post("/api/items")
-            .header("Authorization", format!("Basic {}", &auth))
-            .header("Content-Type", "application/json")
-            .body(r#"{"name": "example"}"#.into())
+        let api = spawn_app_with_db(db).await;
+        let client = reqwest::Client::new();
+        let res: reqwest::Response = client
+            .post(&format!("{api}/items"))
+            .basic_auth("user", Some("user"))
+            .json(&NewItem {
+                name: "example".to_string(),
+                description: None,
+            })
+            .send()
+            .await
             .unwrap();
-        let res = app.oneshot(req).await.unwrap();
-        assert_eq!(StatusCode::CREATED, res.status());
+        assert_eq!(reqwest::StatusCode::CREATED, res.status());
+        let item = res.json::<Item>().await.unwrap();
+        assert!(item.id > 0);
+        assert_eq!("example", item.name);
+        assert_eq!(None, item.description);
     }
 
     #[sqlx::test]
@@ -404,6 +412,63 @@ mod tests {
         let res = client
             .get(&format!("{api}/items/999"))
             .basic_auth("user", Some("user"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(reqwest::StatusCode::NOT_FOUND, res.status());
+    }
+
+    #[sqlx::test]
+    fn put_item_responds_with_ok(db: DbPool) {
+        let api = spawn_app_with_db(db).await;
+
+        // Create item
+        let client = reqwest::Client::new();
+        let res: reqwest::Response = client
+            .post(&format!("{api}/items"))
+            .basic_auth("user", Some("user"))
+            .json(&NewItem {
+                name: "example".to_string(),
+                description: None,
+            })
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(reqwest::StatusCode::CREATED, res.status());
+
+        let created_item = res.json::<Item>().await.unwrap();
+
+        // Update item
+        let res = client
+            .put(&format!("{api}/items/{}", created_item.id))
+            .basic_auth("user", Some("user"))
+            .json(&NewItem {
+                name: "modified".to_string(),
+                description: None,
+            })
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(reqwest::StatusCode::OK, res.status());
+
+        let updated_item = res.json::<Item>().await.unwrap();
+        assert_eq!(created_item.id, updated_item.id);
+        assert_eq!("modified", updated_item.name);
+    }
+
+    #[sqlx::test]
+    fn put_nonexisting_item_responds_with_not_found(db: DbPool) {
+        let api = spawn_app_with_db(db).await;
+        let client = reqwest::Client::new();
+        let res = client
+            .put(&format!("{api}/items/999"))
+            .basic_auth("user", Some("user"))
+            .json(&NewItem {
+                name: "modified".to_string(),
+                description: None,
+            })
             .send()
             .await
             .unwrap();
@@ -460,6 +525,18 @@ mod tests {
         let app = test_app(db);
         let auth = base64::engine::general_purpose::STANDARD.encode("user:user");
         let req = Request::get("/api/items")
+            .header("Authorization", format!("Basic {}", &auth))
+            .body(Body::empty())
+            .unwrap();
+        let res = app.oneshot(req).await.unwrap();
+        assert_eq!(StatusCode::OK, res.status());
+    }
+
+    #[sqlx::test]
+    fn get_items2_responds_with_ok(db: DbPool) {
+        let app = test_app(db);
+        let auth = base64::engine::general_purpose::STANDARD.encode("user:user");
+        let req = Request::get("/api/items2")
             .header("Authorization", format!("Basic {}", &auth))
             .body(Body::empty())
             .unwrap();

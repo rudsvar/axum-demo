@@ -115,7 +115,7 @@ async fn update_item(
     let mut tx = db.begin().await?;
     let item = item_service::update_item(&mut tx, id, new_item).await?;
     tx.commit().await?;
-    Ok((StatusCode::CREATED, Json(item)))
+    Ok((StatusCode::OK, Json(item)))
 }
 
 /// Deletes an item.
