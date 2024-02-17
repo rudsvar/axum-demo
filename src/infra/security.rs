@@ -366,14 +366,29 @@ mod tests {
     fn user() -> User {
         User {
             id: 0,
-            username: "admin".into(),
-            role: "admin".into(),
+            username: "user".into(),
+            role: "user".into(),
             role_type: PhantomData,
         }
     }
 
     fn admin() -> User<Admin> {
-        user().try_upgrade().unwrap()
+        User {
+            id: 0,
+            username: "admin".into(),
+            role: "admin".into(),
+            role_type: PhantomData::<Admin>,
+        }
+        .try_upgrade()
+        .unwrap()
+    }
+
+    #[test]
+    fn user_field_accessors_work() {
+        let user = user();
+        assert_eq!(0, user.id());
+        assert_eq!("user", user.username());
+        assert_eq!("user", user.role());
     }
 
     #[test]
@@ -390,7 +405,22 @@ mod tests {
 
     #[test]
     fn admin_can_call_user_fn_2() {
-        fn user(_: User) {}
-        user(admin().into_any());
+        fn f(_: User) {}
+        f(admin().into_any());
+    }
+
+    #[test]
+    fn admin_can_call_admin_fn() {
+        fn f(_: User<Admin>) {}
+        f(admin());
+    }
+
+    #[test]
+    fn user_cannot_be_upgraded_to_admin() {
+        let result = user().try_upgrade::<Admin>();
+        assert!(matches!(
+            result,
+            Err(ApiError::ClientError(ClientError::Forbidden))
+        ));
     }
 }
