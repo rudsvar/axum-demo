@@ -1,6 +1,6 @@
 # axum-demo
 
-![Build](https://github.com/rudsvar/axum-demo/actions/workflows/build-test-and-deploy.yml/badge.svg)
+![Build](https://github.com/rudsvar/axum-demo/actions/workflows/build.yml/badge.svg)
 [![codecov](https://codecov.io/gh/rudsvar/axum-demo/graph/badge.svg?token=NP4U5LTC4D)](https://codecov.io/gh/rudsvar/axum-demo)
 [![Coverage Status](https://coveralls.io/repos/github/rudsvar/axum-demo/badge.svg?branch=main)](https://coveralls.io/github/rudsvar/axum-demo?branch=main)
 

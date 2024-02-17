@@ -1,4 +1,4 @@
-name: Build, test, and deploy
+name: Build
 
 on:
   push:
@@ -13,8 +13,8 @@ env:
   DATABASE_URL: ${{ secrets.DATABASE_URL }} # For sqlx
 
 jobs:
-  build-test-and-deploy:
-    name: Build, test, and deploy
+  build:
+    name: Build
     runs-on: ubuntu-latest
     permissions:
       id-token: write # This is required for requesting the OIDC JWT Token
