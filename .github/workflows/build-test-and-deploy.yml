@@ -70,8 +70,8 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      # - name: Coveralls
-      #   uses: coverallsapp/github-action@v2
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
 
       # Deploy
 
