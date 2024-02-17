@@ -125,7 +125,7 @@ async fn delete_url(UrlsId(id): UrlsId, db: State<DbPool>, user: User) -> ApiRes
 #[instrument(skip_all)]
 async fn list_urls(Urls: Urls, db: State<DbPool>, user: User) -> ApiResult<Json<Vec<ShortUrl>>> {
     let mut tx = db.begin().await?;
-    let urls = url_repository::list_items(&mut tx, user).await?;
+    let urls = url_repository::list_urls(&mut tx, user).await?;
     Ok(Json(urls))
 }
 

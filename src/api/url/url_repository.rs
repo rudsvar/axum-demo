@@ -116,11 +116,11 @@ pub async fn delete_url<R>(tx: &mut Tx, name: &str, user: User<R>) -> ApiResult<
     Ok(())
 }
 
-/// Lists all items.
+/// Lists all shortened urls.
 #[instrument(skip(tx))]
-pub async fn list_items<R>(tx: &mut Tx, user: User<R>) -> ApiResult<Vec<ShortUrl>> {
+pub async fn list_urls<R>(tx: &mut Tx, user: User<R>) -> ApiResult<Vec<ShortUrl>> {
     tracing::info!("Listing urls");
-    let items = sqlx::query_as!(
+    let urls = sqlx::query_as!(
         ShortUrl,
         r#"
         SELECT * FROM short_urls WHERE created_by = $1
@@ -130,9 +130,107 @@ pub async fn list_items<R>(tx: &mut Tx, user: User<R>) -> ApiResult<Vec<ShortUrl
     .fetch_all(tx.as_mut())
     .instrument(tracing::info_span!("fetch_all"))
     .await?;
-    tracing::info!("Listed {} items", items.len());
-    Ok(items)
+    tracing::info!("Listed {} items", urls.len());
+    Ok(urls)
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use sqlx::PgPool;
+
+    use crate::{
+        api::url::url_repository::NewShortUrl,
+        infra::{
+            error::{ApiError, ClientError},
+            validation::Valid,
+        },
+    };
+
+    #[sqlx::test]
+    async fn creating_url_works(db: PgPool) {
+        let mut tx = db.begin().await.unwrap();
+        let user = crate::infra::security::authenticate(&mut tx, "user", "user")
+            .await
+            .unwrap();
+        let new_url = NewShortUrl {
+            name: "example".to_string(),
+            target: "https://example.com".to_string(),
+        };
+        let result = super::create_url(&mut tx, Valid::new(new_url).unwrap(), user).await;
+        assert!(result.is_ok());
+    }
+
+    #[sqlx::test]
+    async fn fetching_url_works(db: PgPool) {
+        let mut tx = db.begin().await.unwrap();
+        let user = crate::infra::security::authenticate(&mut tx, "user", "user")
+            .await
+            .unwrap();
+        let new_url = NewShortUrl {
+            name: "example".to_string(),
+            target: "https://example.com".to_string(),
+        };
+        super::create_url(&mut tx, Valid::new(new_url).unwrap(), user.clone())
+            .await
+            .unwrap();
+        let result = super::fetch_url(&mut tx, "example").await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_some());
+    }
+
+    #[sqlx::test]
+    async fn fetching_nonexistent_url_returns_none(db: PgPool) {
+        let mut tx = db.begin().await.unwrap();
+        let result = super::fetch_url(&mut tx, "nonexistent").await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+    }
+
+    #[sqlx::test]
+    async fn deleting_url_works(db: PgPool) {
+        let mut tx = db.begin().await.unwrap();
+        let user = crate::infra::security::authenticate(&mut tx, "user", "user")
+            .await
+            .unwrap();
+        let new_url = NewShortUrl {
+            name: "example".to_string(),
+            target: "https://example.com".to_string(),
+        };
+        let url = super::create_url(&mut tx, Valid::new(new_url).unwrap(), user.clone())
+            .await
+            .unwrap();
+        let result = super::delete_url(&mut tx, &url.name, user).await;
+        assert!(result.is_ok());
+    }
+
+    #[sqlx::test]
+    async fn deleting_nonexistent_url_returns_not_found(db: PgPool) {
+        let mut tx = db.begin().await.unwrap();
+        let user = crate::infra::security::authenticate(&mut tx, "user", "user")
+            .await
+            .unwrap();
+        let result = super::delete_url(&mut tx, "nonexistent", user).await;
+        assert!(matches!(
+            result,
+            Err(ApiError::ClientError(ClientError::NotFound))
+        ));
+    }
+
+    #[sqlx::test]
+    async fn listing_urls_works(db: PgPool) {
+        let mut tx = db.begin().await.unwrap();
+        let user = crate::infra::security::authenticate(&mut tx, "user", "user")
+            .await
+            .unwrap();
+        let new_url = NewShortUrl {
+            name: "example".to_string(),
+            target: "https://example.com".to_string(),
+        };
+        super::create_url(&mut tx, Valid::new(new_url).unwrap(), user.clone())
+            .await
+            .unwrap();
+        let result = super::list_urls(&mut tx, user).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 1);
+    }
+}
