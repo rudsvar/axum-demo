@@ -97,7 +97,7 @@ futures = "0.3.25"
 async-stream = "0.3.5"
 slab = "0.4.8"
 dotenv = "0.15.0"
-validator = { version = "0.16.1", features = ["derive"] }
+validator = { version = "0.17.0", features = ["derive"] }
 base64 = "0.21.2"
 askama = "0.12.1"
 askama_axum = "0.4.0"
