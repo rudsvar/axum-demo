@@ -331,7 +331,7 @@ dependencies = [
  "hyper 1.2.0",
  "opentelemetry 0.22.0",
  "opentelemetry-jaeger",
- "opentelemetry_sdk",
+ "opentelemetry_sdk 0.22.1",
  "reqwest",
  "serde",
  "serde_json",
@@ -2010,7 +2010,7 @@ dependencies = [
  "futures-util",
  "opentelemetry 0.21.0",
  "opentelemetry-semantic-conventions",
- "opentelemetry_sdk",
+ "opentelemetry_sdk 0.21.2",
  "thrift",
  "tokio",
 ]
@@ -2037,6 +2037,27 @@ dependencies = [
  "futures-util",
  "once_cell",
  "opentelemetry 0.21.0",
+ "ordered-float 4.2.0",
+ "percent-encoding",
+ "rand",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
+name = "opentelemetry_sdk"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e90c7113be649e31e9a0f8b5ee24ed7a16923b322c3c5ab6367469c049d6b7e"
+dependencies = [
+ "async-trait",
+ "crossbeam-channel",
+ "futures-channel",
+ "futures-executor",
+ "futures-util",
+ "once_cell",
+ "opentelemetry 0.22.0",
  "ordered-float 4.2.0",
  "percent-encoding",
  "rand",
@@ -3588,7 +3609,7 @@ dependencies = [
  "js-sys",
  "once_cell",
  "opentelemetry 0.21.0",
- "opentelemetry_sdk",
+ "opentelemetry_sdk 0.21.2",
  "tracing",
  "tracing-core",
  "tracing-subscriber",
