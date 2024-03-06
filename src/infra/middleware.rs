@@ -1,5 +1,7 @@
 //! Middleware for modifying requests and responses.
 
+use std::time::Duration;
+
 use crate::{
     api::request::request_repository::{self, NewRequest},
     infra::{
@@ -106,8 +108,20 @@ pub(crate) async fn log_request_response(
             response_body: res_string,
             status,
         };
-        if let Err(e) = store_request(db, &new_req).await {
-            tracing::error!("Failed to store request: {}", e);
+        // Store request (with retries)
+        let mut tries = 0;
+        while tries < 3 {
+            match store_request(db.clone(), &new_req).await {
+                Err(e) => {
+                    tracing::error!("Failed to store request (attempt {}): {}", tries + 1, e);
+                    tries += 1;
+                    tokio::time::sleep(Duration::from_secs((tries + 1) * 5)).await;
+                }
+                Ok(req) => {
+                    tracing::info!("Stored request with id {}", req.id);
+                    break;
+                }
+            }
         }
     });
 
@@ -115,11 +129,14 @@ pub(crate) async fn log_request_response(
 }
 
 /// Store a request in the database.
-async fn store_request(db: DbPool, new_req: &NewRequest) -> ApiResult<()> {
+async fn store_request(
+    db: DbPool,
+    new_req: &NewRequest,
+) -> ApiResult<crate::api::request::request_repository::Request> {
     let mut tx = db.begin().await?;
-    let _ = request_repository::log_request(&mut tx, new_req).await?;
+    let req = request_repository::log_request(&mut tx, new_req).await?;
     tx.commit().await?;
-    Ok(())
+    Ok(req)
 }
 
 /// Read the entire request body stream and store it in memory.
