@@ -68,6 +68,8 @@ jobs:
 
       - name: Run tests (with tarpaulin)
         run: cargo tarpaulin --release --out xml --skip-clean
+        env:
+          RUSTFLAGS: -Cstrip=none
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v4
