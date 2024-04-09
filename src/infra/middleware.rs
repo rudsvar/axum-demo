@@ -15,6 +15,7 @@ use http::{Request, Response};
 use http_body_util::BodyExt;
 use hyper::body::Body as _;
 use tower_http::trace::MakeSpan;
+use tracing::Instrument;
 
 use super::error::ApiResult;
 
@@ -98,32 +99,36 @@ pub(crate) async fn log_request_response(
     };
     let status = res.status().as_u16() as i32;
 
+    let span = tracing::info_span!("Async log");
     // Log request asynchronously
-    tokio::spawn(async move {
-        let new_req = NewRequest {
-            host,
-            method,
-            uri,
-            request_body: req_string,
-            response_body: res_string,
-            status,
-        };
-        // Store request (with retries)
-        let mut tries = 0;
-        while tries < 3 {
-            match store_request(db.clone(), &new_req).await {
-                Err(e) => {
-                    tracing::error!("Failed to store request (attempt {}): {}", tries + 1, e);
-                    tries += 1;
-                    tokio::time::sleep(Duration::from_secs((tries + 1) * 5)).await;
-                }
-                Ok(req) => {
-                    tracing::info!("Stored request with id {}", req.id);
-                    break;
+    tokio::spawn(
+        async move {
+            let new_req = NewRequest {
+                host,
+                method,
+                uri,
+                request_body: req_string,
+                response_body: res_string,
+                status,
+            };
+            // Store request (with retries)
+            let mut tries = 0;
+            while tries < 3 {
+                match store_request(db.clone(), &new_req).await {
+                    Err(e) => {
+                        tracing::error!("Failed to store request (attempt {}): {}", tries + 1, e);
+                        tries += 1;
+                        tokio::time::sleep(Duration::from_secs((tries + 1) * 5)).await;
+                    }
+                    Ok(req) => {
+                        tracing::info!("Stored request with id {}", req.id);
+                        break;
+                    }
                 }
             }
         }
-    });
+        .instrument(span),
+    );
 
     Ok(res)
 }
