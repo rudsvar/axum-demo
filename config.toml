@@ -14,8 +14,8 @@ database_name = "axum-demo"
 
 [logging]
 rust_log = "info,tower_http=trace,axum_demo=debug"
-jaeger_host = "localhost"
-jaeger_port = 6831
+jaeger_host = "http://localhost"
+jaeger_port = 4317
 
 [mq]
 host = "localhost"

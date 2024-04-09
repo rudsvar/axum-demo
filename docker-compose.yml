@@ -36,6 +36,10 @@ services:
       - 16686:16686
       - 14268:14268
       - 9411:9411
+      - 4317:4317
+      - 4318:4318
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
 
   rabbitmq:
     image: rabbitmq:3.11.5-management
