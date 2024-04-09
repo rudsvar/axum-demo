@@ -1,5 +1,8 @@
 //! For setting up logging.
 
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::Resource;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
@@ -23,11 +26,17 @@ pub fn init_logging(config: &LoggingConfig) -> LogGuard {
 
     let app_name = env!("CARGO_PKG_NAME");
     let jaeger_endpoint = format!("{}:{}", config.jaeger_host, config.jaeger_port);
-    let opentelemetry_tracer = opentelemetry_jaeger::new_agent_pipeline()
-        .with_endpoint(jaeger_endpoint)
-        .with_service_name(app_name)
-        .with_auto_split_batch(true)
-        .with_max_packet_size(8192)
+    let opentelemetry_tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint(jaeger_endpoint),
+        )
+        .with_trace_config(
+            opentelemetry_sdk::trace::config()
+                .with_resource(Resource::new(vec![KeyValue::new("service.name", app_name)])),
+        )
         .install_batch(opentelemetry_sdk::runtime::Tokio)
         .unwrap();
     let opentelemetry = tracing_opentelemetry::layer()
