@@ -13,7 +13,7 @@ password = "password"
 database_name = "axum-demo"
 
 [logging]
-rust_log = "info,tower_http=trace,axum_demo=debug"
+rust_log = "warn,tower_http=trace,axum_demo=debug"
 jaeger_host = "http://localhost"
 jaeger_port = 4317
 

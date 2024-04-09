@@ -99,7 +99,7 @@ pub(crate) async fn log_request_response(
     };
     let status = res.status().as_u16() as i32;
 
-    let span = tracing::info_span!("Async log");
+    let span = tracing::info_span!("async log");
     // Log request asynchronously
     tokio::spawn(
         async move {
