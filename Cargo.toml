@@ -48,7 +48,7 @@ utoipa = { version = "4.2.0", features = [
     "chrono",
     "url",
 ] }
-utoipa-swagger-ui = { version = "6.0.0", features = ["axum"] }
+utoipa-swagger-ui = { version = "7.0.0", features = ["axum"] }
 utoipa-redoc = { version = "3.0.0", features = ["axum"] }
 utoipa-rapidoc = { version = "3.0.0", features = ["axum"] }
 
