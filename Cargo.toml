@@ -50,7 +50,7 @@ utoipa = { version = "4.2.0", features = [
 ] }
 utoipa-swagger-ui = { version = "7.0.1", features = ["axum"] }
 utoipa-redoc = { version = "3.0.0", features = ["axum"] }
-utoipa-rapidoc = { version = "3.0.0", features = ["axum"] }
+utoipa-rapidoc = { version = "4.0.0", features = ["axum"] }
 
 # Integration
 sqlx = { version = "0.7.2", default-features = false, features = [
