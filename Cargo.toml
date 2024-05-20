@@ -79,7 +79,7 @@ tracing-opentelemetry = { version = "0.23.0", default-features = false }
 tracing-error = "0.2.0"
 console-subscriber = "0.2.0"
 opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.15.0" }
+opentelemetry-otlp = { version = "0.16.0" }
 opentelemetry = { version = "0.22.0", default-features = false, features = [
     "trace",
 ] }
