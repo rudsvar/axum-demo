@@ -75,7 +75,7 @@ tracing-subscriber = { version = "0.3.17", default-features = false, features = 
     "ansi",
 ] }
 tracing-appender = "0.2.2"
-tracing-opentelemetry = { version = "0.23.0", default-features = false }
+tracing-opentelemetry = { version = "0.24.0", default-features = false }
 tracing-error = "0.2.0"
 console-subscriber = "0.2.0"
 opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio"] }
