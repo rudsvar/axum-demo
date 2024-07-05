@@ -75,12 +75,12 @@ tracing-subscriber = { version = "0.3.17", default-features = false, features = 
     "ansi",
 ] }
 tracing-appender = "0.2.2"
-tracing-opentelemetry = { version = "0.23.0", default-features = false }
+tracing-opentelemetry = { version = "0.24.0", default-features = false }
 tracing-error = "0.2.0"
-console-subscriber = "0.2.0"
-opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.15.0" }
-opentelemetry = { version = "0.22.0", default-features = false, features = [
+console-subscriber = "0.3.0"
+opentelemetry_sdk = { version = "0.23.0", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.16.0" }
+opentelemetry = { version = "0.23.0", default-features = false, features = [
     "trace",
 ] }
 
@@ -91,7 +91,7 @@ bcrypt = "0.15.0"
 thiserror = "1.0.56"
 color-eyre = "0.6.2"
 chrono = { version = "0.4.23", default-features = false, features = ["serde"] }
-cached = { version = "0.51.3", features = ["async"] }
+cached = { version = "0.52.0", features = ["async"] }
 bytes = "1.6.0"
 futures = "0.3.25"
 async-stream = "0.3.5"
