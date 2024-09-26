@@ -29,7 +29,7 @@ tower-http = { version = "0.6.1", features = [
     "timeout",
     "fs",
 ] }
-tower-sessions = { version = "0.12.1" }
+tower-sessions = { version = "0.13.0" }
 tower-sessions-sqlx-store = { version = "0.12.0", features = ["postgres"] }
 http = "1.1.0"
 http-body-util = "0.1.0"
