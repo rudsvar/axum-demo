@@ -10,7 +10,7 @@ static MIGRATOR: Migrator = sqlx::migrate!();
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     // Load environment variables from .env file
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
     color_eyre::install()?;
 
     let config = infra::config::load_config()?;

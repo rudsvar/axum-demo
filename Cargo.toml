@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 
 # Web
-axum = { version = "0.7.6", features = ["macros"] }
+axum = { version = "0.7.7", features = ["macros"] }
 axum-extra = { version = "0.9.4", features = [
     "typed-routing",
     "json-lines",
@@ -29,8 +29,8 @@ tower-http = { version = "0.6.1", features = [
     "timeout",
     "fs",
 ] }
-tower-sessions = { version = "0.12.1" }
-tower-sessions-sqlx-store = { version = "0.12.0", features = ["postgres"] }
+tower-sessions = { version = "0.13.0" }
+tower-sessions-sqlx-store = { version = "0.14.1", default-features = false, features = ["postgres"] }
 http = "1.1.0"
 http-body-util = "0.1.0"
 hyper = "1.4.1"
@@ -53,7 +53,7 @@ utoipa-redoc = { version = "4.0.0", features = ["axum"] }
 utoipa-rapidoc = { version = "4.0.0", features = ["axum"] }
 
 # Integration
-sqlx = { version = "0.7.2", default-features = false, features = [
+sqlx = { version = "0.8.2", default-features = false, features = [
     "runtime-tokio-rustls",
     "macros",
     "postgres",
@@ -96,7 +96,7 @@ bytes = "1.7.2"
 futures = "0.3.25"
 async-stream = "0.3.5"
 slab = "0.4.8"
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 validator = { version = "0.18.0", features = ["derive"] }
 base64 = "0.22.1"
 askama = "0.12.1"
