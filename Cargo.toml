@@ -33,7 +33,7 @@ tower-sessions = { version = "0.13.0" }
 tower-sessions-sqlx-store = { version = "0.14.1", default-features = false, features = ["postgres"] }
 http = "1.1.0"
 http-body-util = "0.1.0"
-hyper = "1.4.1"
+hyper = "1.5.1"
 tokio = { version = "1.40.0", features = [
     "macros",
     "rt-multi-thread",
