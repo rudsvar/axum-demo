@@ -2,7 +2,7 @@
 
 use crate::infra::{
     database::DbPool,
-    error::{ApiResult, ClientError},
+    error::{ApiResult, ClientError, ErrorBody},
     extract::Json,
     security::User,
     state::AppState,
@@ -30,7 +30,7 @@ pub fn routes() -> Router<AppState> {
 struct Urls;
 
 #[derive(Deserialize, TypedPath)]
-#[typed_path("/urls/:id", rejection(ClientError))]
+#[typed_path("/urls/{id}", rejection(ClientError))]
 struct UrlsId(String);
 
 /// Shortens a new URL.

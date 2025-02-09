@@ -1,4 +1,5 @@
 use askama::Template;
+use askama_axum::IntoResponse;
 use axum::Router;
 use axum_extra::routing::{RouterExt, TypedPath};
 
@@ -18,9 +19,9 @@ pub struct IndexTemplate {
 #[typed_path("/", rejection(ClientError))]
 pub struct Index;
 
-pub async fn index(_: Index, user: User) -> IndexTemplate {
+pub async fn index(_: Index, user: User) -> askama_axum::Response {
     // Display user information
     IndexTemplate {
         username: user.username().to_string(),
-    }
+    }.into_response()
 }

@@ -1,8 +1,6 @@
 services:
 
   axum-demo:
-    profiles:
-      - app
     build: .
     ports:
       - 3000

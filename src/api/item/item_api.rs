@@ -7,7 +7,7 @@ use crate::{
     },
     infra::{
         database::DbPool,
-        error::{ApiError, ApiResult, ClientError},
+        error::{ApiError, ApiResult, ClientError, ErrorBody},
         extract::{Json, Query},
         pagination::PaginationParams,
         state::AppState,
@@ -47,7 +47,7 @@ struct Items;
 struct Items2;
 
 #[derive(Deserialize, TypedPath)]
-#[typed_path("/items/:id", rejection(ClientError))]
+#[typed_path("/items/{id}", rejection(ClientError))]
 struct ItemsId(i32);
 
 /// Creates a new item.

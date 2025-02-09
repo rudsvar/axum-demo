@@ -1,4 +1,5 @@
 use askama::Template;
+use askama_axum::IntoResponse;
 use axum::{extract::State, response::Redirect, Form, Router};
 use axum_extra::routing::{RouterExt, TypedPath};
 use serde::{Deserialize, Serialize};
@@ -14,7 +15,9 @@ use crate::infra::{
 use super::{index::Index, SESSION_USER_KEY};
 
 pub fn routes() -> Router<AppState> {
-    Router::new().typed_get(get_login).typed_post(post_login)
+    Router::new()
+        .typed_get(get_login)
+        .typed_post(post_login)
 }
 
 #[derive(Template, Default)]
@@ -26,8 +29,9 @@ pub struct LoginTemplate;
 pub struct LoginPath;
 
 /// Display the login page.
-pub async fn get_login(_: LoginPath) -> LoginTemplate {
-    LoginTemplate
+#[axum::debug_handler]
+pub async fn get_login(_: LoginPath) -> askama_axum::Response {
+    LoginTemplate.into_response()
 }
 
 #[derive(Serialize, Deserialize)]

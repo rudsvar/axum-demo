@@ -1,7 +1,7 @@
 //! The user API implementation.
 
 use crate::infra::{
-    error::ApiResult,
+    error::{ApiResult, ErrorBody},
     extract::Json,
     security::{Admin, Role, User},
     state::AppState,

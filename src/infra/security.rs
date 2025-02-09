@@ -40,7 +40,7 @@ use super::{
     error::{ApiError, ApiResult, ClientError, InternalError},
     state::AppState,
 };
-use axum::{async_trait, extract::FromRequestParts, RequestPartsExt};
+use axum::{extract::FromRequestParts, RequestPartsExt};
 use axum_extra::{
     headers::{authorization::Basic, Authorization},
     TypedHeader,
@@ -207,10 +207,11 @@ impl<R> std::fmt::Debug for User<R> {
 
 async fn extract_session(req: &mut http::request::Parts) -> Result<Option<Session>, ApiError> {
     let session = req
-        .extract::<Option<Session>>()
+        .extract::<Session>()
         .await
+        .map(Some)
         .map_err(|e| {
-            tracing::error!("Failed to extract session: {}", e);
+            tracing::error!("Failed to extract session: {:?}", e);
             e
         })
         .unwrap_or(None);
@@ -243,7 +244,6 @@ where
     Ok(None)
 }
 
-#[async_trait]
 impl<R> FromRequestParts<AppState> for User<R>
 where
     R: Role + Send,

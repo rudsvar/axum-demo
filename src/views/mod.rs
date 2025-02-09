@@ -19,9 +19,9 @@ pub fn views(state: AppState, config: Config, store: PostgresStore) -> Router {
     tracing::info!("Session expiry: {:?}", expiry);
     let session_layer = SessionManagerLayer::new(store).with_expiry(expiry);
     Router::new()
-        .nest("/", index::routes())
-        .nest("/", login::routes())
-        .nest("/", logout::routes())
+        .merge(index::routes())
+        .merge(login::routes())
+        .merge(logout::routes())
         .with_state(state)
         .layer(session_layer)
 }
