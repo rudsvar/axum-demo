@@ -6,6 +6,7 @@ use std::time::Duration;
 
 /// Application configuration.
 #[derive(Clone, Debug, Deserialize, FromRef)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     /// Server configuration.
     pub server: ServerConfig,
@@ -13,10 +14,15 @@ pub struct Config {
     pub database: DatabaseConfig,
     /// Jaeger configuration.
     pub logging: LoggingConfig,
+    /// MQ configuration.
+    pub mq: MqConfig,
+    /// Email configuration.
+    pub email: EmailConfig,
 }
 
 /// Server configuration.
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     /// Server address.
     pub http_address: String,
@@ -33,6 +39,7 @@ pub struct ServerConfig {
 
 /// Database configuration.
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DatabaseConfig {
     /// The database username.
     pub username: String,
@@ -48,6 +55,7 @@ pub struct DatabaseConfig {
 
 /// Jaeger configuration.
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LoggingConfig {
     /// Logging configuration.
     pub rust_log: String,
@@ -55,6 +63,32 @@ pub struct LoggingConfig {
     pub jaeger_host: String,
     /// The jaeger port.
     pub jaeger_port: u16,
+}
+
+/// MQ configuration.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MqConfig {
+    /// The mq host.
+    pub host: String,
+    /// The mq port.
+    pub port: u16,
+    /// The mq username.
+    pub username: String,
+    /// The mq password.
+    pub password: String,
+}
+
+/// Email configuration.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EmailConfig {
+    /// The email host.
+    pub host: String,
+    /// The email username.
+    pub username: String,
+    /// The email password.
+    pub password: String,
 }
 
 /// Retrieve [`Config`] from the default configuration file.
