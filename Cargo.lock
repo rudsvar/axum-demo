@@ -586,6 +586,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "cfg_aliases"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
+
+[[package]]
 name = "chrono"
 version = "0.4.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1202,8 +1208,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4567c8db10ae91089c99af84c68c38da3ec2f087c3f82960bcdbf3656b6f4d7"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1499,6 +1507,24 @@ dependencies = [
  "smallvec",
  "tokio",
  "want",
+]
+
+[[package]]
+name = "hyper-rustls"
+version = "0.27.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d191583f3da1305256f22463b9bb0471acad48a4e534a5218b9963e9c1f59b2"
+dependencies = [
+ "futures-util",
+ "http 1.2.0",
+ "hyper 1.6.0",
+ "hyper-util",
+ "rustls",
+ "rustls-pki-types",
+ "tokio",
+ "tokio-rustls",
+ "tower-service",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -2245,6 +2271,58 @@ dependencies = [
 ]
 
 [[package]]
+name = "quinn"
+version = "0.11.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62e96808277ec6f97351a2380e6c25114bc9e67037775464979f3037c92d05ef"
+dependencies = [
+ "bytes",
+ "pin-project-lite",
+ "quinn-proto",
+ "quinn-udp",
+ "rustc-hash",
+ "rustls",
+ "socket2",
+ "thiserror 2.0.11",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "quinn-proto"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2fe5ef3495d7d2e377ff17b1a8ce2ee2ec2a18cde8b6ad6619d65d0701c135d"
+dependencies = [
+ "bytes",
+ "getrandom",
+ "rand",
+ "ring",
+ "rustc-hash",
+ "rustls",
+ "rustls-pki-types",
+ "slab",
+ "thiserror 2.0.11",
+ "tinyvec",
+ "tracing",
+ "web-time",
+]
+
+[[package]]
+name = "quinn-udp"
+version = "0.5.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c40286217b4ba3a71d644d752e6a0b71f13f1b6a2c5311acfcbe0c2418ed904"
+dependencies = [
+ "cfg_aliases",
+ "libc",
+ "once_cell",
+ "socket2",
+ "tracing",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2344,12 +2422,14 @@ checksum = "f713147fbe92361e52392c73b8c9e48c04c6625bce969ef54dc901e58e042a7b"
 dependencies = [
  "base64 0.22.1",
  "bytes",
+ "futures-channel",
  "futures-core",
  "futures-util",
  "http 1.2.0",
  "http-body 1.0.1",
  "http-body-util",
  "hyper 1.6.0",
+ "hyper-rustls",
  "hyper-util",
  "ipnet",
  "js-sys",
@@ -2358,16 +2438,22 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
+ "quinn",
+ "rustls",
+ "rustls-pemfile",
+ "rustls-pki-types",
  "serde",
  "serde_json",
  "serde_urlencoded",
  "sync_wrapper 1.0.1",
  "tokio",
+ "tokio-rustls",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "webpki-roots",
  "windows-registry",
 ]
 
@@ -2491,6 +2577,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "719b953e2095829ee67db738b3bfa9fa368c94900df327b3f07fe6e794d2fe1f"
 
 [[package]]
+name = "rustc-hash"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
+
+[[package]]
 name = "rustix"
 version = "0.38.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2532,6 +2624,9 @@ name = "rustls-pki-types"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc0a2ce646f8655401bb81e7927b812614bd5d91dbc968696be50603510fcaf0"
+dependencies = [
+ "web-time",
+]
 
 [[package]]
 name = "rustls-webpki"
@@ -3186,6 +3281,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-rustls"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c7bc40d0e5a97695bb96e27995cd3a08538541b0a846f65bba7a359f36700d4"
+dependencies = [
+ "rustls",
+ "rustls-pki-types",
+ "tokio",
+]
+
+[[package]]
 name = "tokio-stream"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3678,6 +3784,7 @@ dependencies = [
  "base64 0.22.1",
  "mime_guess",
  "regex",
+ "reqwest",
  "rust-embed",
  "serde",
  "serde_json",

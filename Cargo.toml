@@ -49,7 +49,7 @@ utoipa = { version = "5.3.1", features = [
     "url",
     "time"
 ] }
-utoipa-swagger-ui = { version = "9.0.0", features = ["axum", "debug-embed"] }
+utoipa-swagger-ui = { version = "9.0.0", features = ["axum", "reqwest"] }
 utoipa-redoc = { version = "6.0.0", features = ["axum"] }
 utoipa-rapidoc = { version = "6.0.0", features = ["axum"] }
 
