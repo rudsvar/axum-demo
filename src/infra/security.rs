@@ -45,7 +45,7 @@ use axum_extra::{
     headers::{authorization::Basic, Authorization},
     TypedHeader,
 };
-use cached::proc_macro::cached;
+use cached::cached;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use tower_sessions::Session;
@@ -289,8 +289,8 @@ where
 /// Validate a user's password.
 #[cached(
     size = 100,
-    time = 30,
-    time_refresh,
+    ttl = 30,
+    refresh = true,
     sync_writes = true,
     key = "String",
     convert = r##"{ format!("{}:{}", username, password) }"##,

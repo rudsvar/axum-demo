@@ -8,8 +8,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SQLX_VERSION: 0.7.2
-  TARPAULIN_VERSION: 0.27.3
+  SQLX_VERSION: 0.8.6
+  TARPAULIN_VERSION: 0.35.4
   DATABASE_URL: ${{ secrets.DATABASE_URL }} # For sqlx
 
 jobs:
@@ -22,16 +22,12 @@ jobs:
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
-      rabbitmq:
-        image: rabbitmq:3.11.5
-        ports:
-          - 5672:5672
 
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +68,7 @@ jobs:
           RUSTFLAGS: -Cstrip=none
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 

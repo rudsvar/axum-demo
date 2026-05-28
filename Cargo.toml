@@ -9,7 +9,7 @@ edition = "2021"
 
 # Web
 axum = { version = "0.8.1", features = ["macros"] }
-axum-extra = { version = "0.10.0", features = [
+axum-extra = { version = "0.12.0", features = [
     "typed-routing",
     "json-lines",
     "typed-header",
@@ -76,11 +76,11 @@ tracing-subscriber = { version = "0.3.17", default-features = false, features = 
     "ansi",
 ] }
 tracing-appender = "0.2.2"
-tracing-opentelemetry = { version = "0.24.0", default-features = false }
+tracing-opentelemetry = { version = "0.33.0", default-features = false }
 tracing-error = "0.2.0"
-opentelemetry_sdk = { version = "0.23.0", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.16.0" }
-opentelemetry = { version = "0.23.0", default-features = false, features = [
+opentelemetry_sdk = { version = "0.32.0", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.32.0", features = ["grpc-tonic"] }
+opentelemetry = { version = "0.32.0", default-features = false, features = [
     "trace",
 ] }
 
@@ -91,7 +91,7 @@ bcrypt = "0.15.0"
 thiserror = "1.0.64"
 color-eyre = "0.6.2"
 chrono = { version = "0.4.23", default-features = false, features = ["serde"] }
-cached = { version = "0.53.1", features = ["async"] }
+cached = { version = "1.1.0", features = ["async"] }
 bytes = "1.7.2"
 futures = "0.3.31"
 async-stream = "0.3.6"
@@ -99,8 +99,7 @@ slab = "0.4.8"
 dotenvy = "0.15.7"
 validator = { version = "0.18.0", features = ["derive"] }
 base64 = "0.22.1"
-askama = "0.12.1"
-askama_axum = "0.4.0"
+askama = "0.16.0"
 time = "0.3.31"
 humantime-serde = "1.1.1"
 

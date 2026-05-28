@@ -61,7 +61,10 @@ pub fn app(state: AppState, config: Config, store: PostgresStore) -> Router {
         .merge(RapiDoc::new("/api/openapi.json").path("/api/rapidoc"))
         .nest("/api", crate::api::api(state.clone()))
         // Layers
-        .layer(TimeoutLayer::new(Duration::from_secs(10)))
+        .layer(TimeoutLayer::with_status_code(
+            http::StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(10),
+        ))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             crate::infra::middleware::log_request_response,

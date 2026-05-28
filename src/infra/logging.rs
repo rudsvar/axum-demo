@@ -1,8 +1,11 @@
 //! For setting up logging.
 
 use opentelemetry::KeyValue;
-use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::Resource;
+use opentelemetry_otlp::{SpanExporter, WithExportConfig};
+use opentelemetry_sdk::{
+    trace::{BatchSpanProcessor, SdkTracerProvider},
+    Resource,
+};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
@@ -26,21 +29,29 @@ pub fn init_logging(config: &LoggingConfig) -> LogGuard {
 
     let app_name = env!("CARGO_PKG_NAME");
     let jaeger_endpoint = format!("{}:{}", config.jaeger_host, config.jaeger_port);
-    let opentelemetry_tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(jaeger_endpoint),
-        )
-        .with_trace_config(
-            opentelemetry_sdk::trace::config()
-                .with_resource(Resource::new(vec![KeyValue::new("service.name", app_name)])),
-        )
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
+
+    let exporter = SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(jaeger_endpoint)
+        .build()
         .unwrap();
+
+    let processor = BatchSpanProcessor::builder(exporter).build();
+
+    let provider = SdkTracerProvider::builder()
+        .with_span_processor(processor)
+        .with_resource(
+            Resource::builder_empty()
+                .with_attributes([KeyValue::new("service.name", app_name)])
+                .build(),
+        )
+        .build();
+
+    let tracer = opentelemetry::trace::TracerProvider::tracer(&provider, app_name);
+    opentelemetry::global::set_tracer_provider(provider);
+
     let opentelemetry = tracing_opentelemetry::layer()
-        .with_tracer(opentelemetry_tracer)
+        .with_tracer(tracer)
         .with_filter(EnvFilter::new(log_level));
 
     let reg = tracing_subscriber::registry()
