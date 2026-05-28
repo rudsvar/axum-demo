@@ -9,7 +9,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   SQLX_VERSION: 0.8.6
-  TARPAULIN_VERSION: 0.35.4
   DATABASE_URL: ${{ secrets.DATABASE_URL }} # For sqlx
 
 jobs:
@@ -50,22 +49,14 @@ jobs:
             --no-default-features \
             --locked
 
-      - name: Install tarpaulin
-        run: |
-          cargo install cargo-tarpaulin \
-            --version=${{ env.TARPAULIN_VERSION }} \
-            --locked
-
       - name: Set up database
         run: sqlx database setup
 
       - name: Check sqlx-data.json
         run: cargo sqlx prepare --check -- --lib
 
-      - name: Run tests (with tarpaulin)
-        run: cargo tarpaulin --release --out xml --skip-clean
-        env:
-          RUSTFLAGS: -Cstrip=none
+      - name: Run tests
+        run: cargo test
 
       # Deploy
 
