@@ -67,9 +67,6 @@ jobs:
         env:
           RUSTFLAGS: -Cstrip=none
 
-      - name: Upload to coveralls.io
-        uses: coverallsapp/github-action@v2
-
       # Deploy
 
       - name: Build
